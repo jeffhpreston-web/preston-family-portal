@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preston Collection — Family Access</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000;
+    --deep: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #2a2a2a;
+    --border-light: #333333;
+    --red: #c0392b;
+    --red-hover: #e74c3c;
+    --gold: #b8972a;
+    --gold-light: #d4a843;
+    --white: #ffffff;
+    --grey: #888888;
+    --grey-light: #aaaaaa;
+    --text: #e8e8e8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── BACKGROUND TEXTURE ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(192,57,43,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 90%, rgba(184,151,42,0.03) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── VIEWS ─── */
+  .view { display: none; min-height: 100vh; position: relative; z-index: 1; }
+  .view.active { display: flex; flex-direction: column; }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 48px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    text-decoration: none;
+  }
+
+  .logo-emblem {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .logo-emblem span {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .logo-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--white);
+    letter-spacing: 0.08em;
+  }
+
+  .logo-text small {
+    display: block;
+    font-size: 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 300;
+    color: var(--grey);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+  }
+
+  nav a {
+    color: var(--grey);
+    text-decoration: none;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    transition: color 0.3s;
+    cursor: pointer;
+  }
+  nav a:hover { color: var(--white); }
+
+  /* ─── HERO SECTION ─── */
+  .hero {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: calc(100vh - 89px);
+  }
+
+  .hero-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 64px;
+    border-right: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .eyebrow::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--gold);
+  }
+
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(48px, 5vw, 72px);
+    font-weight: 300;
+    line-height: 1.05;
+    color: var(--white);
+    margin-bottom: 28px;
+    letter-spacing: -0.01em;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--gold-light);
+  }
+
+  .hero-desc {
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--grey-light);
+    max-width: 440px;
+    margin-bottom: 48px;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 56px;
+  }
+
+  .stat-item {
+    border-left: 1px solid var(--border);
+    padding-left: 20px;
+  }
+
+  .stat-number {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px;
+    font-weight: 300;
+    color: var(--white);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--grey);
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 14px 32px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .btn-primary {
+    background: var(--red);
+    color: var(--white);
+  }
+  .btn-primary:hover { background: var(--red-hover); transform: translateY(-1px); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--grey-light);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--grey); color: var(--white); }
+
+  .btn-gold {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+  }
+  .btn-gold:hover { background: var(--gold); color: var(--black); }
+
+  /* ─── LOGIN PANEL ─── */
+  .login-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 80px 64px;
+    background: var(--deep);
+  }
+
+  .panel-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 300;
+    color: var(--white);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .panel-subtitle {
+    font-size: 11px;
+    color: var(--grey);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+    text-align: center;
+  }
+
+  .form-group {
+    width: 100%;
+    max-width: 380px;
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--grey);
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--white);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    transition: border-color 0.3s;
+    outline: none;
+  }
+
+  .form-input:focus { border-color: var(--gold); }
+  .form-input::placeholder { color: var(--border-light); }
+
+  .form-input.textarea {
+    resize: vertical;
+    min-height: 120px;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  .form-error {
+    font-size: 11px;
+    color: var(--red);
+    margin-top: 6px;
+    display: none;
+  }
+
+  .form-hint {
+    font-size: 11px;
+    color: var(--grey);
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+
+  .divider {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .divider span {
+    font-size: 10px;
+    color: var(--grey);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--gold);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  .link-btn:hover { color: var(--gold-light); }
+
+  .alert {
+    width: 100%;
+    max-width: 380px;
+    padding: 14px 18px;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    display: none;
+  }
+
+  .alert-error { background: rgba(192,57,43,0.15); border: 1px solid rgba(192,57,43,0.4); color: #e74c3c; }
+  .alert-success { background: rgba(184,151,42,0.12); border: 1px solid rgba(184,151,42,0.4); color: var(--gold-light); }
+
+  /* ─── PORTAL VIEW ─── */
+  .portal-header {
+    padding: 24px 48px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--grey-light);
+  }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 16px;
+    color: var(--gold);
+  }
+
+  .portal-body {
+    padding: 64px 48px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .portal-welcome {
+    margin-bottom: 56px;
+  }
+
+  .portal-welcome h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 48px;
+    font-weight: 300;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+
+  .portal-welcome p {
+    color: var(--grey);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+  }
+
+  .collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2px;
+    margin-bottom: 48px;
+  }
+
+  .collection-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 36px 32px;
+    transition: all 0.3s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .collection-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--red);
+    transform: scaleX(0);
+    transition: transform 0.3s;
+  }
+
+  .collection-card:hover { background: var(--surface2); }
+  .collection-card:hover::before { transform: scaleX(1); }
+
+  .card-icon {
+    font-size: 32px;
+    margin-bottom: 20px;
+    display: block;
+  }
+
+  .card-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+
+  .card-count {
+    font-size: 11px;
+    color: var(--grey);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--grey);
+    line-height: 1.7;
+  }
+
+  .portal-sections {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 32px;
+    margin-top: 48px;
+  }
+
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 36px;
+  }
+
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    color: var(--white);
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .timeline-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .timeline-item:last-child { border-bottom: none; }
+
+  .timeline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gold);
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  .timeline-content h4 {
+    font-size: 13px;
+    color: var(--white);
+    margin-bottom: 4px;
+    font-weight: 400;
+  }
+
+  .timeline-content p {
+    font-size: 11px;
+    color: var(--grey);
+    line-height: 1.6;
+  }
+
+  .coming-soon-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(184,151,42,0.1);
+    border: 1px solid rgba(184,151,42,0.3);
+    color: var(--gold);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  /* ─── ADMIN VIEW ─── */
+  .admin-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: calc(100vh - 89px);
+  }
+
+  .admin-sidebar {
+    background: var(--deep);
+    border-right: 1px solid var(--border);
+    padding: 32px 0;
+  }
+
+  .sidebar-section {
+    padding: 0 24px;
+    margin-bottom: 32px;
+  }
+
+  .sidebar-label {
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--grey);
+    margin-bottom: 12px;
+    padding: 0 8px;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 8px;
+    font-size: 12px;
+    color: var(--grey-light);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .sidebar-item:hover { background: var(--surface); color: var(--white); }
+  .sidebar-item.active { background: var(--surface); color: var(--white); border-left: 2px solid var(--red); padding-left: 6px; }
+
+  .sidebar-badge {
+    margin-left: auto;
+    background: var(--red);
+    color: var(--white);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  .admin-main {
+    padding: 48px;
+    overflow-y: auto;
+  }
+
+  .admin-page { display: none; }
+  .admin-page.active { display: block; }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+  }
+
+  .page-header h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px;
+    font-weight: 300;
+    color: var(--white);
+  }
+
+  .page-header p {
+    font-size: 12px;
+    color: var(--grey);
+    margin-top: 4px;
+  }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    margin-bottom: 40px;
+  }
+
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 28px;
+  }
+
+  .stat-box-number {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 44px;
+    font-weight: 300;
+    color: var(--white);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-box-label {
+    font-size: 10px;
+    color: var(--grey);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .stat-box-trend {
+    font-size: 11px;
+    color: var(--gold);
+    margin-top: 8px;
+  }
+
+  /* Applications table */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--grey);
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+
+  .data-table td {
+    padding: 18px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .data-table tr:hover td { background: var(--surface); }
+
+  .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .status-pending { background: rgba(184,151,42,0.15); color: var(--gold); border: 1px solid rgba(184,151,42,0.3); }
+  .status-approved { background: rgba(39,174,96,0.12); color: #2ecc71; border: 1px solid rgba(39,174,96,0.3); }
+  .status-rejected { background: rgba(192,57,43,0.15); color: var(--red); border: 1px solid rgba(192,57,43,0.3); }
+  .status-active { background: rgba(52,152,219,0.12); color: #3498db; border: 1px solid rgba(52,152,219,0.3); }
+
+  .action-btns {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-sm {
+    padding: 6px 14px;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .btn-approve { background: rgba(39,174,96,0.15); color: #2ecc71; border: 1px solid rgba(39,174,96,0.3); }
+  .btn-approve:hover { background: rgba(39,174,96,0.3); }
+
+  .btn-reject { background: rgba(192,57,43,0.12); color: var(--red); border: 1px solid rgba(192,57,43,0.3); }
+  .btn-reject:hover { background: rgba(192,57,43,0.25); }
+
+  .btn-view { background: var(--surface2); color: var(--grey-light); border: 1px solid var(--border); }
+  .btn-view:hover { color: var(--white); }
+
+  .btn-revoke { background: rgba(192,57,43,0.12); color: var(--red); border: 1px solid rgba(192,57,43,0.3); }
+  .btn-revoke:hover { background: rgba(192,57,43,0.25); }
+
+  .heritage-text {
+    font-size: 12px;
+    color: var(--grey-light);
+    line-height: 1.7;
+    max-width: 360px;
+    font-style: italic;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 560px;
+    padding: 48px;
+    position: relative;
+    animation: modalIn 0.3s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: var(--grey);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  .modal-close:hover { color: var(--white); }
+
+  .modal h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+
+  .modal-meta {
+    font-size: 11px;
+    color: var(--grey);
+    margin-bottom: 28px;
+    letter-spacing: 0.1em;
+  }
+
+  .detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-row:last-child { border-bottom: none; }
+
+  .detail-label {
+    font-size: 10px;
+    color: var(--grey);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .detail-value {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  /* Password gen */
+  .password-display {
+    background: var(--deep);
+    border: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 16px 0;
+  }
+
+  .password-display code {
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+  }
+
+  /* Members table access level */
+  .access-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: 'Montserrat', sans-serif;
+    cursor: pointer;
+    outline: none;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    padding: 16px 24px;
+    font-size: 12px;
+    color: var(--text);
+    z-index: 9999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    max-width: 320px;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.error { border-left-color: var(--red); }
+
+  /* Spinner */
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: var(--white);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Fade in */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-up { animation: fadeUp 0.6s ease forwards; }
+  .fade-up-2 { animation: fadeUp 0.6s 0.1s ease both; }
+  .fade-up-3 { animation: fadeUp 0.6s 0.2s ease both; }
+  .fade-up-4 { animation: fadeUp 0.6s 0.3s ease both; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-content { padding: 48px 32px; border-right: none; border-bottom: 1px solid var(--border); }
+    .login-panel { padding: 48px 32px; }
+    header { padding: 20px 24px; }
+    .admin-layout { grid-template-columns: 1fr; }
+    .admin-sidebar { display: none; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .portal-sections { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     VIEW 1 — PUBLIC LANDING / LOGIN
+════════════════════════════════════════════ -->
+<div class="view active" id="view-landing">
+  <header>
+    <a class="logo" href="#">
+      <div class="logo-emblem">
+        <span>Preston</span>
+        <span>Collection</span>
+      </div>
+      <div class="logo-text">
+        The Preston Collection
+        <small>Est. 1865 · Originated c.1625</small>
+      </div>
+    </a>
+    <nav>
+      <a onclick="showView('view-landing')">Family Portal</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <!-- Left: Branding -->
+    <div class="hero-content">
+      <div class="eyebrow fade-up">Family Access Portal</div>
+      <h1 class="fade-up-2">
+        Eight Generations<br>
+        of <em>Living</em> History
+      </h1>
+      <p class="hero-desc fade-up-3">
+        The Preston Collection is a privately held family archive spanning over 400 years — 
+        from manuscripts and fine art to coins, jewelry, and historical memorabilia. 
+        This portal grants verified family members exclusive access to the full collection.
+      </p>
+      <div class="hero-stats fade-up-3">
+        <div class="stat-item">
+          <div class="stat-number">400<span style="font-size:24px">+</span></div>
+          <div class="stat-label">Years of History</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">8<span style="font-size:24px">+</span></div>
+          <div class="stat-label">Generations</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">12</div>
+          <div class="stat-label">Categories</div>
+        </div>
+      </div>
+      <div class="btn-group fade-up-4">
+        <button class="btn btn-gold" onclick="showPanel('request')">
+          ✦ Request Family Access
+        </button>
+        <a href="https://prestoncollection.net" class="btn btn-secondary">← Public Site</a>
+      </div>
+    </div>
+
+    <!-- Right: Login / Request Panel -->
+    <div class="login-panel" id="panel-login">
+
+      <!-- LOGIN FORM -->
+      <div id="login-form-wrap" style="width:100%; max-width:380px; display:flex; flex-direction:column; align-items:center;">
+        <div class="panel-title">Family Member Login</div>
+        <div class="panel-subtitle">Verified access only</div>
+
+        <div class="alert alert-error" id="login-error">Invalid email or password. Please try again.</div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" type="email" id="login-email" placeholder="your@email.com">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="login-password" placeholder="••••••••••">
+        </div>
+
+        <button class="btn btn-primary" style="width:100%; max-width:380px; justify-content:center; margin-top:8px;" onclick="handleLogin()">
+          Sign In to Collection
+        </button>
+
+        <div class="divider"><span>or</span></div>
+
+        <button class="link-btn" onclick="showPanel('request')">Request Family Access →</button>
+
+        <div style="margin-top: 16px;">
+          <button class="link-btn" style="font-size:11px; color: var(--grey);" onclick="showPanel('reset')">Forgot password?</button>
+        </div>
+
+        <div class="divider" style="margin-top: 32px;"><span>admin</span></div>
+        <button class="link-btn" style="font-size:11px; color: var(--grey);" onclick="showAdminLogin()">Administrator Portal →</button>
+      </div>
+
+      <!-- REQUEST ACCESS FORM -->
+      <div id="request-form-wrap" style="width:100%; max-width:380px; display:none; flex-direction:column; align-items:center;">
+        <div class="panel-title">Request Family Access</div>
+        <div class="panel-subtitle">Verification Required</div>
+
+        <div class="alert alert-success" id="request-success" style="display:none;">
+          ✦ Your application has been received. The collection administrator will review your heritage statement and contact you within 5–7 business days.
+        </div>
+
+        <div id="request-fields">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="form-input" type="text" id="req-name" placeholder="Your full name">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" id="req-email" placeholder="your@email.com">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Location</label>
+            <input class="form-input" type="text" id="req-location" placeholder="City, Country">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Preston Family Heritage Statement</label>
+            <textarea class="form-input textarea" id="req-heritage" placeholder="Please describe your connection to the Preston family — your lineage, how you are related, and any family members who can verify your heritage. Include as much detail as possible to assist our verification process."></textarea>
+            <div class="form-hint">This statement will be reviewed by the collection administrator. Be as specific as possible about your family connection.</div>
+          </div>
+
+          <button class="btn btn-gold" style="width:100%; justify-content:center; margin-top:8px;" onclick="handleAccessRequest()">
+            Submit Heritage Statement
+          </button>
+        </div>
+
+        <div style="margin-top:24px;">
+          <button class="link-btn" style="color:var(--grey); font-size:11px;" onclick="showPanel('login')"><← Back to Login</button>
+        </div>
+      </div>
+
+      <!-- RESET PASSWORD -->
+      <div id="reset-form-wrap" style="width:100%; max-width:380px; display:none; flex-direction:column; align-items:center;">
+        <div class="panel-title">Reset Password</div>
+        <div class="panel-subtitle">Enter your registered email</div>
+
+        <div class="alert alert-success" id="reset-success" style="display:none;">
+          If your email is registered, you will receive reset instructions shortly.
+        </div>
+
+        <div id="reset-fields">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" id="reset-email" placeholder="your@email.com">
+          </div>
+
+          <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="handleReset()">
+            Send Reset Link
+          </button>
+        </div>
+
+        <div style="margin-top:24px;">
+          <button class="link-btn" style="color:var(--grey); font-size:11px;" onclick="showPanel('login')"><← Back to Login</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     VIEW 2 — FAMILY MEMBER PORTAL
+════════════════════════════════════════════ -->
+<div class="view" id="view-portal">
+  <div class="portal-header">
+    <a class="logo" href="#">
+      <div class="logo-emblem">
+        <span>Preston</span>
+        <span>Collection</span>
+      </div>
+      <div class="logo-text">
+        The Preston Collection
+        <small>Family Member Portal</small>
+      </div>
+    </a>
+    <div style="display:flex; align-items:center; gap:24px;">
+      <div class="user-badge">
+        <div class="user-avatar" id="portal-avatar">J</div>
+        <span id="portal-username">Family Member</span>
+      </div>
+      <button class="btn btn-secondary" style="padding:10px 20px; font-size:10px;" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="portal-body">
+    <div class="portal-welcome fade-up">
+      <h2>Welcome, <span id="portal-firstname" style="color:var(--gold-light); font-style:italic;">Member</span></h2>
+      <p>You have access to the full Preston family collection archive</p>
+    </div>
+
+    <div class="collection-grid fade-up-2">
+      <div class="collection-card">
+        <span class="card-icon">📜</span>
+        <div class="card-title">Books & Manuscripts</div>
+        <div class="card-count">Coming Soon</div>
+        <div class="card-desc">Rare books, handwritten manuscripts, and historical documents spanning 400+ years.</div>
+      </div>
+      <div class="collection-card">
+        <span class="card-icon">🪙</span>
+        <div class="card-title">Coins & Currency</div>
+        <div class="card-count">PSA/PCG Integration Pending</div>
+        <div class="card-desc">Graded coin collection with full certification data from PCG.</div>
+      </div>
+      <div class="collection-card">
+        <span class="card-icon">🎨</span>
+        <div class="card-title">Fine Art & Prints</div>
+        <div class="card-count">Coming Soon</div>
+        <div class="card-desc">Original artworks, limited prints, and lithographs from renowned artists.</div>
+      </div>
+      <div class="collection-card">
+        <span class="card-icon">⏱️</span>
+        <div class="card-title">Horology</div>
+        <div class="card-count">Coming Soon</div>
+        <div class="card-desc">Antique and contemporary timepiece collection.</div>
+      </div>
+      <div class="collection-card">
+        <span class="card-icon">🗺️</span>
+        <div class="card-title">Maps & Lithographs</div>
+        <div class="card-count">Coming Soon</div>
+        <div class="card-desc">Historical cartography and rare lithographic prints.</div>
+      </div>
+      <div class="collection-card">
+        <span class="card-icon">🏆</span>
+        <div class="card-title">Sports & Trade Cards</div>
+        <div class="card-count">PSA Integration Pending</div>
+        <div class="card-desc">Graded sports cards with full PSA certification data.</div>
+      </div>
+    </div>
+
+    <div class="portal-sections fade-up-3">
+      <div class="section-card">
+        <div class="section-title">Family Contributions</div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <h4>Contribution Portal — Coming Soon</h4>
+            <p>Family members will be able to upload photos and information about collection items held around the world. Submissions will be reviewed by the administrator before joining the main archive.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--border);"></div>
+          <div class="timeline-content">
+            <h4>PSA / PCG Grading Database</h4>
+            <p>A live feed of all graded items in the collection, pulling directly from PSA and PCG APIs. API integration in development.</p>
+          </div>
+        </div>
+        <div class="coming-soon-badge">V1 Features In Development</div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-title">Your Access</div>
+        <div class="detail-row">
+          <div class="detail-label">Access Level</div>
+          <div class="detail-value" id="portal-access-level">Full Family Member</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Member Since</div>
+          <div class="detail-value" id="portal-since">—</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Status</div>
+          <div class="detail-value"><span class="status-badge status-approved">✓ Active</span></div>
+        </div>
+        <div style="margin-top:24px;">
+          <button class="btn btn-secondary" style="font-size:10px; padding:10px 20px;" onclick="showChangePassword()">Change Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     VIEW 3 — ADMIN LOGIN
+════════════════════════════════════════════ -->
+<div class="view" id="view-admin-login">
+  <header>
+    <a class="logo" href="#">
+      <div class="logo-emblem"><span>Preston</span><span>Collection</span></div>
+      <div class="logo-text">Administrator Portal<small>Restricted Access</small></div>
+    </a>
+  </header>
+
+  <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--deep);">
+    <div style="width:100%; max-width:420px; padding:48px 32px;">
+      <div class="eyebrow" style="justify-content:center; margin-bottom:32px;">Admin Access</div>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:300; color:var(--white); text-align:center; margin-bottom:8px;">Administrator Login</h2>
+      <p style="text-align:center; color:var(--grey); font-size:12px; margin-bottom:40px; letter-spacing:0.05em;">Restricted to collection administrators</p>
+
+      <div class="alert alert-error" id="admin-login-error">Invalid administrator credentials.</div>
+
+      <div class="form-group">
+        <label class="form-label">Admin Email</label>
+        <input class="form-input" type="email" id="admin-email" placeholder="admin@prestoncollection.net">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Admin Password</label>
+        <input class="form-input" type="password" id="admin-password" placeholder="••••••••••">
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:16px;" onclick="handleAdminLogin()">
+        Access Admin Portal
+      </button>
+
+      <div style="text-align:center; margin-top:24px;">
+        <button class="link-btn" style="color:var(--grey); font-size:11px;" onclick="showView('view-landing')"><← Back to Family Portal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     VIEW 4 — ADMIN DASHBOARD
+════════════════════════════════════════════ -->
+<div class="view" id="view-admin">
+  <header>
+    <a class="logo" href="#">
+      <div class="logo-emblem"><span>Preston</span><span>Collection</span></div>
+      <div class="logo-text">Admin Portal<small>Collection Management</small></div>
+    </a>
+    <div style="display:flex; align-items:center; gap:24px;">
+      <span style="font-size:11px; color:var(--grey);">Jeff Preston · Administrator</span>
+      <button class="btn btn-secondary" style="padding:10px 20px; font-size:10px;" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <div class="admin-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Overview</div>
+        <button class="sidebar-item active" onclick="switchAdminPage('dashboard', this)">
+          ◈ &nbsp;Dashboard
+        </button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Access Control</div>
+        <button class="sidebar-item" onclick="switchAdminPage('applications', this)">
+          ◻ &nbsp;Applications
+          <span class="sidebar-badge" id="pending-count-badge">3</span>
+        </button>
+        <button class="sidebar-item" onclick="switchAdminPage('members', this)">
+          ◻ &nbsp;Family Members
+        </button>
+        <button class="sidebar-item" onclick="switchAdminPage('invitations', this)">
+          ◻ &nbsp;Send Invitation
+        </button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Collection</div>
+        <button class="sidebar-item" onclick="switchAdminPage('activity', this)">
+          ◻ &nbsp;Activity Log
+        </button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Settings</div>
+        <button class="sidebar-item" onclick="switchAdminPage('settings', this)">
+          ◻ &nbsp;Portal Settings
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-main">
+
+      <!-- DASHBOARD -->
+      <div class="admin-page active" id="page-dashboard">
+        <div class="page-header">
+          <div>
+            <h2>Dashboard</h2>
+            <p>Preston Collection family portal overview</p>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-box-number">12</div>
+            <div class="stat-box-label">Active Members</div>
+            <div class="stat-box-trend">↑ 2 this month</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-number" id="dash-pending">3</div>
+            <div class="stat-box-label">Pending Applications</div>
+            <div class="stat-box-trend" style="color:var(--gold);">Awaiting review</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-number">4</div>
+            <div class="stat-box-label">Countries Represented</div>
+            <div class="stat-box-trend">US · UK · AU · NZ</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-number">8</div>
+            <div class="stat-box-label">Generations</div>
+            <div class="stat-box-trend">Est. c.1625</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+          <div class="section-card">
+            <div class="section-title">Recent Applications</div>
+            <div id="recent-apps-list">
+              <!-- populated by JS -->
+            </div>
+            <div style="margin-top:20px;">
+              <button class="btn btn-secondary" style="font-size:10px; padding:10px 20px;" onclick="switchAdminPage('applications', document.querySelector('.sidebar-item:nth-child(2)'))">View All →</button>
+            </div>
+          </div>
+          <div class="section-card">
+            <div class="section-title">Quick Actions</div>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <button class="btn btn-gold" style="justify-content:flex-start;" onclick="switchAdminPage('invitations', null)">✦ Send Direct Invitation</button>
+              <button class="btn btn-secondary" style="justify-content:flex-start;" onclick="switchAdminPage('applications', null)">◻ Review Applications</button>
+              <button class="btn btn-secondary" style="justify-content:flex-start;" onclick="switchAdminPage('members', null)">◻ Manage Members</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- APPLICATIONS -->
+      <div class="admin-page" id="page-applications">
+        <div class="page-header">
+          <div>
+            <h2>Access Applications</h2>
+            <p>Review heritage statements and grant or deny family access</p>
+          </div>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--border); overflow:auto;">
+          <table class="data-table" id="applications-table">
+            <thead>
+              <tr>
+                <th>Applicant</th>
+                <th>Location</th>
+                <th>Heritage Statement</th>
+                <th>Applied</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="applications-tbody">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MEMBERS -->
+      <div class="admin-page" id="page-members">
+        <div class="page-header">
+          <div>
+            <h2>Family Members</h2>
+            <p>Manage access levels, passwords, and membership status</p>
+          </div>
+          <button class="btn btn-gold" onclick="showGeneratePasswordModal()">+ Generate Password</button>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--border); overflow:auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Location</th>
+                <th>Access Level</th>
+                <th>Member Since</th>
+                <th>Last Login</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="members-tbody">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- INVITATIONS -->
+      <div class="admin-page" id="page-invitations">
+        <div class="page-header">
+          <div>
+            <h2>Send Direct Invitation</h2>
+            <p>Invite a known family member directly, bypassing the application process</p>
+          </div>
+        </div>
+
+        <div style="max-width:560px;">
+          <div class="section-card">
+            <div class="alert alert-success" id="invite-success" style="display:none; margin-bottom:20px;">
+              ✦ Invitation sent successfully. A temporary password has been generated and included in the email.
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input class="form-input" type="text" id="inv-name" placeholder="Family member's full name">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input class="form-input" type="email" id="inv-email" placeholder="their@email.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Location</label>
+              <input class="form-input" type="text" id="inv-location" placeholder="City, Country">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Access Level</label>
+              <select class="form-input" id="inv-access">
+                <option value="Full Member">Full Member — Complete collection access</option>
+                <option value="View Only">View Only — Browse but cannot contribute</option>
+                <option value="Contributor">Contributor — Can submit items to collection</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Personal Note (optional)</label>
+              <textarea class="form-input textarea" id="inv-note" placeholder="Add a personal note to the invitation email..." style="min-height:80px;"></textarea>
+            </div>
+
+            <div style="margin-top:8px;">
+              <label class="form-label" style="margin-bottom:12px;">Generated Temporary Password</label>
+              <div class="password-display">
+                <code id="temp-password">—</code>
+                <button class="btn-sm btn-view" onclick="generateTempPassword()">Regenerate</button>
+              </div>
+              <div class="form-hint">This password will be included in the invitation email. The member must change it on first login.</div>
+            </div>
+
+            <button class="btn btn-gold" style="margin-top:24px; justify-content:flex-start;" onclick="sendInvitation()">
+              ✦ Send Invitation Email
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY LOG -->
+      <div class="admin-page" id="page-activity">
+        <div class="page-header">
+          <div>
+            <h2>Activity Log</h2>
+            <p>All portal login and access events</p>
+          </div>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--border);">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>User</th>
+                <th>Details</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody id="activity-tbody">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="admin-page" id="page-settings">
+        <div class="page-header">
+          <div>
+            <h2>Portal Settings</h2>
+            <p>Configure access and notification preferences</p>
+          </div>
+        </div>
+
+        <div style="max-width:600px; display:flex; flex-direction:column; gap:24px;">
+          <div class="section-card">
+            <div class="section-title">Access Control</div>
+            <div class="detail-row" style="flex-direction:row; align-items:center; justify-content:space-between;">
+              <div>
+                <div class="detail-label">Open Applications</div>
+                <div style="font-size:12px; color:var(--grey); margin-top:4px;">Allow new family members to request access</div>
+              </div>
+              <label style="position:relative; width:44px; height:24px; cursor:pointer;">
+                <input type="checkbox" checked style="opacity:0; width:0; height:0;" id="toggle-open">
+                <span style="position:absolute; inset:0; background:var(--gold); border-radius:12px; transition:0.3s;"></span>
+                <span style="position:absolute; top:3px; left:3px; width:18px; height:18px; background:white; border-radius:50%; transition:0.3s;"></span>
+              </label>
+            </div>
+            <div class="detail-row" style="flex-direction:row; align-items:center; justify-content:space-between;">
+              <div>
+                <div class="detail-label">Email Notifications</div>
+                <div style="font-size:12px; color:var(--grey); margin-top:4px;">Receive email when new applications arrive</div>
+              </div>
+              <label style="position:relative; width:44px; height:24px; cursor:pointer;">
+                <input type="checkbox" checked style="opacity:0; width:0; height:0;">
+                <span style="position:absolute; inset:0; background:var(--gold); border-radius:12px;"></span>
+                <span style="position:absolute; top:3px; left:3px; width:18px; height:18px; background:white; border-radius:50%;"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-title">Admin Password</div>
+            <div class="form-group">
+              <label class="form-label">Current Password</label>
+              <input class="form-input" type="password" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+              <label class="form-label">New Password</label>
+              <input class="form-input" type="password" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm New Password</label>
+              <input class="form-input" type="password" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary" style="margin-top:8px;" onclick="showToast('Admin password updated successfully')">Update Password</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /admin-main -->
+  </div><!-- /admin-layout -->
+</div><!-- /view-admin -->
+
+<!-- ════════════════════════════════════════════
+     MODALS
+════════════════════════════════════════════ -->
+
+<!-- Application Review Modal -->
+<div class="modal-overlay" id="modal-review">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-review')">✕</button>
+    <h3 id="modal-name">Applicant Name</h3>
+    <div class="modal-meta" id="modal-meta">Applied — location</div>
+
+    <div class="detail-row">
+      <div class="detail-label">Email</div>
+      <div class="detail-value" id="modal-email">—</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Heritage Statement</div>
+      <div class="detail-value heritage-text" id="modal-heritage">—</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Access Level to Grant</div>
+      <select class="access-select" id="modal-access-select" style="margin-top:8px; width:100%;">
+        <option value="Full Member">Full Member — Complete collection access</option>
+        <option value="View Only">View Only — Browse but cannot contribute</option>
+        <option value="Contributor">Contributor — Can submit items</option>
+      </select>
+    </div>
+    <div class="detail-row" id="modal-password-row" style="display:none;">
+      <div class="detail-label">Temporary Password Generated</div>
+      <div class="password-display" style="margin-top:8px;">
+        <code id="modal-temp-pass">—</code>
+      </div>
+      <div class="form-hint">This password will be emailed to the applicant.</div>
+    </div>
+
+    <div class="modal-actions" id="modal-pending-actions">
+      <button class="btn btn-approve" id="modal-approve-btn" onclick="approveApplication()" style="padding:12px 24px; font-size:11px;">✓ Approve & Send Login</button>
+      <button class="btn btn-reject" onclick="rejectApplication()" style="padding:12px 24px; font-size:11px;">✕ Reject Application</button>
+    </div>
+    <div class="modal-actions" id="modal-decided-actions" style="display:none;">
+      <button class="btn btn-view" onclick="closeModal('modal-review')" style="padding:12px 24px; font-size:11px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal-overlay" id="modal-password">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-password')">✕</button>
+    <h3>Generate New Password</h3>
+    <div class="modal-meta">For an existing family member</div>
+
+    <div class="form-group" style="margin-top:24px;">
+      <label class="form-label">Select Member</label>
+      <select class="form-input" id="pw-member-select">
+        <!-- populated by JS -->
+      </select>
+    </div>
+
+    <label class="form-label" style="display:block; margin-top:16px; margin-bottom:8px;">New Temporary Password</label>
+    <div class="password-display">
+      <code id="new-temp-pass">—</code>
+      <button class="btn-sm btn-view" onclick="genNewPass()">Regenerate</button>
+    </div>
+    <div class="form-hint">Member will receive this via email and must change it on next login.</div>
+
+    <div class="modal-actions" style="margin-top:24px;">
+      <button class="btn btn-primary" onclick="sendNewPassword()" style="padding:12px 24px;">Send Password Reset</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-password')" style="padding:12px 24px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password (member) -->
+<div class="modal-overlay" id="modal-change-pw">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-change-pw')">✕</button>
+    <h3>Change Your Password</h3>
+    <div class="form-group" style="margin-top:24px;">
+      <label class="form-label">Current Password</label>
+      <input class="form-input" type="password" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label class="form-label">New Password</label>
+      <input class="form-input" type="password" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Confirm New Password</label>
+      <input class="form-input" type="password" placeholder="••••••••">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeModal('modal-change-pw'); showToast('Password updated successfully')">Update Password</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-change-pw')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  DATA STORE (in production: replace with DB/API)
+// ═══════════════════════════════════════════════
+
+const USERS = [
+  { id:1, name:'Sarah Preston-Williams', email:'sarah.pw@email.com', password:'Preston2024!', location:'London, UK', access:'Full Member', since:'Jan 2024', lastLogin:'2 hours ago', status:'active' },
+  { id:2, name:'Michael Preston', email:'mike.p@email.com', password:'Preston2024!', location:'Sydney, AU', access:'Full Member', since:'Jan 2024', lastLogin:'Yesterday', status:'active' },
+  { id:3, name:'Eleanor Preston', email:'eleanor@email.com', password:'Preston2024!', location:'Boston, US', access:'View Only', since:'Feb 2024', lastLogin:'1 week ago', status:'active' },
+];
+
+const APPLICATIONS = [
+  { id:1, name:'Thomas Harrington-Preston', email:'thomas.hp@email.com', location:'Edinburgh, UK', heritage:'My grandfather was Robert Preston, younger brother of Edmund Preston IV. I have family photographs and correspondence dated 1952 showing my direct lineage. My grandmother, Margaret Preston (née Ashworth), kept extensive family diaries which I can share. I grew up hearing stories of the collection and would be deeply honoured to be connected to this living piece of our family history.', applied:'March 8, 2026', status:'pending' },
+  { id:2, name:'Catherine du Bois-Preston', email:'catherine.dbp@email.com', location:'Paris, France', heritage:'I am the great-granddaughter of Isabelle Preston who emigrated to France in 1923 following her marriage to Henri du Bois. I have her original Preston family Bible, several oil portraits, and letters that confirm my lineage. My mother, Marguerite du Bois-Preston (still living, 84), can also vouch for our heritage.', applied:'March 5, 2026', status:'pending' },
+  { id:3, name:'James Whitfield', email:'james.w@email.com', location:'Auckland, NZ', heritage:'I believe my great-great-grandmother may have been a Preston. I found a reference in a genealogy website but do not have documentation. I am happy to share what I have found online.', applied:'February 28, 2026', status:'pending' },
+  { id:4, name:'Victoria Preston-Lange', email:'vicky.pl@email.com', location:'Cape Town, SA', heritage:'I am the granddaughter of Arthur Preston, who emigrated to South Africa in 1948. I have his birth certificate, passport, and family correspondence all documenting his Preston heritage. My father, Geoffrey Preston-Lange, was a well-known member of the Cape Town Preston family branch.', applied:'February 15, 2026', status:'approved' },
+  { id:5, name:'Derek Smith', email:'derek.s@email.com', location:'Manchester, UK', heritage:'Family friend.', applied:'February 10, 2026', status:'rejected' },
+];
+
+const ACTIVITY = [
+  { event:'Login', user:'Sarah Preston-Williams', detail:'Successful login from London, UK', time:'2 hours ago' },
+  { event:'Login', user:'Michael Preston', detail:'Successful login from Sydney, AU', time:'Yesterday, 14:32' },
+  { event:'Application', user:'Thomas Harrington-Preston', detail:'New access application submitted', time:'March 8, 2026' },
+  { event:'Application', user:'Catherine du Bois-Preston', detail:'New access application submitted', time:'March 5, 2026' },
+  { event:'Approved', user:'Victoria Preston-Lange', detail:'Application approved — Full Member access granted', time:'Feb 16, 2026' },
+  { event:'Rejected', user:'Derek Smith', detail:'Application rejected — insufficient heritage documentation', time:'Feb 11, 2026' },
+  { event:'Login', user:'Eleanor Preston', detail:'Successful login from Boston, US', time:'March 4, 2026' },
+];
+
+// Demo admin creds
+const ADMIN = { email: 'admin@prestoncollection.net', password: 'Preston@Admin2026' };
+
+let currentApp = null;
+let currentUser = null;
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+window.onload = () => {
+  renderApplications();
+  renderMembers();
+  renderActivity();
+  renderRecentApps();
+  generateTempPassword();
+  genNewPass();
+  populateMemberSelect();
+  updatePendingBadge();
+};
+
+// ═══════════════════════════════════════════════
+//  VIEW SWITCHING
+// ═══════════════════════════════════════════════
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function showPanel(panel) {
+  document.getElementById('login-form-wrap').style.display = 'none';
+  document.getElementById('request-form-wrap').style.display = 'none';
+  document.getElementById('reset-form-wrap').style.display = 'none';
+
+  if (panel === 'login') document.getElementById('login-form-wrap').style.display = 'flex';
+  if (panel === 'request') document.getElementById('request-form-wrap').style.display = 'flex';
+  if (panel === 'reset') document.getElementById('reset-form-wrap').style.display = 'flex';
+}
+
+function showAdminLogin() { showView('view-admin-login'); }
+
+function switchAdminPage(page, btn) {
+  document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+
+  if (btn) {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  if (page === 'invitations') generateTempPassword();
+}
+
+function logout() {
+  currentUser = null;
+  showView('view-landing');
+  showPanel('login');
+}
+
+// ═══════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════
+function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-password').value;
+  const err = document.getElementById('login-error');
+
+  const user = USERS.find(u => u.email === email && u.password === pass);
+
+  if (user) {
+    err.style.display = 'none';
+    currentUser = user;
+    document.getElementById('portal-username').textContent = user.name;
+    document.getElementById('portal-firstname').textContent = user.name.split(' ')[0];
+    document.getElementById('portal-avatar').textContent = user.name[0];
+    document.getElementById('portal-access-level').textContent = user.access;
+    document.getElementById('portal-since').textContent = user.since;
+    logActivity('Login', user.name, 'Successful login');
+    showView('view-portal');
+  } else {
+    err.style.display = 'block';
+  }
+}
+
+function handleAdminLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const pass = document.getElementById('admin-password').value;
+  const err = document.getElementById('admin-login-error');
+
+  if (email === ADMIN.email && pass === ADMIN.password) {
+    err.style.display = 'none';
+    logActivity('Admin Login', 'Jeff Preston', 'Administrator logged in');
+    showView('view-admin');
+  } else {
+    err.style.display = 'block';
+  }
+}
+
+function handleAccessRequest() {
+  const name = document.getElementById('req-name').value.trim();
+  const email = document.getElementById('req-email').value.trim();
+  const location = document.getElementById('req-location').value.trim();
+  const heritage = document.getElementById('req-heritage').value.trim();
+
+  if (!name || !email || !heritage) {
+    showToast('Please complete all required fields', true);
+    return;
+  }
+
+  const app = {
+    id: APPLICATIONS.length + 1,
+    name, email, location,
+    heritage,
+    applied: new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'}),
+    status: 'pending'
+  };
+
+  APPLICATIONS.unshift(app);
+  renderApplications();
+  renderRecentApps();
+  updatePendingBadge();
+  logActivity('Application', name, 'New access application submitted');
+
+  document.getElementById('request-fields').style.display = 'none';
+  document.getElementById('request-success').style.display = 'block';
+}
+
+function handleReset() {
+  document.getElementById('reset-fields').style.display = 'none';
+  document.getElementById('reset-success').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER TABLES
+// ═══════════════════════════════════════════════
+function renderApplications() {
+  const tbody = document.getElementById('applications-tbody');
+  tbody.innerHTML = APPLICATIONS.map(app => `
+    <tr>
+      <td>
+        <div style="font-weight:500; color:var(--white); margin-bottom:3px;">${app.name}</div>
+        <div style="font-size:11px; color:var(--grey);">${app.email}</div>
+      </td>
+      <td style="color:var(--grey-light);">${app.location || '—'}</td>
+      <td>
+        <div class="heritage-text" style="max-width:300px;">"${app.heritage.substring(0,120)}${app.heritage.length > 120 ? '…' : ''}"</div>
+      </td>
+      <td style="color:var(--grey); font-size:12px;">${app.applied}</td>
+      <td><span class="status-badge status-${app.status}">${app.status}</span></td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-sm btn-view" onclick="openReview(${app.id})">View</button>
+          ${app.status === 'pending' ? `
+            <button class="btn-sm btn-approve" onclick="quickApprove(${app.id})">Approve</button>
+            <button class="btn-sm btn-reject" onclick="quickReject(${app.id})">Reject</button>
+          ` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderMembers() {
+  const tbody = document.getElementById('members-tbody');
+  tbody.innerHTML = USERS.map(u => `
+    <tr>
+      <td style="color:var(--white); font-weight:500;">${u.name}</td>
+      <td style="color:var(--grey-light); font-size:12px;">${u.email}</td>
+      <td style="color:var(--grey); font-size:12px;">${u.location}</td>
+      <td>
+        <select class="access-select" onchange="updateAccess(${u.id}, this.value)">
+          <option ${u.access==='Full Member'?'selected':''}>Full Member</option>
+          <option ${u.access==='View Only'?'selected':''}>View Only</option>
+          <option ${u.access==='Contributor'?'selected':''}>Contributor</option>
+        </select>
+      </td>
+      <td style="color:var(--grey); font-size:12px;">${u.since}</td>
+      <td style="color:var(--grey); font-size:12px;">${u.lastLogin}</td>
+      <td><span class="status-badge status-active">Active</span></td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-sm btn-view" onclick="showToast('Password reset sent to ${u.name}')">Reset PW</button>
+          <button class="btn-sm btn-revoke" onclick="revokeMember(${u.id})">Revoke</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderActivity() {
+  const tbody = document.getElementById('activity-tbody');
+  tbody.innerHTML = ACTIVITY.map(a => {
+    const color = a.event==='Login'?'var(--grey-light)':a.event==='Approved'?'#2ecc71':a.event==='Rejected'?'var(--red)':'var(--gold)';
+    return `
+    <tr>
+      <td><span style="color:${color}; font-size:12px; font-weight:500;">${a.event}</span></td>
+      <td style="color:var(--white); font-size:13px;">${a.user}</td>
+      <td style="color:var(--grey); font-size:12px;">${a.detail}</td>
+      <td style="color:var(--grey); font-size:12px;">${a.time}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderRecentApps() {
+  const el = document.getElementById('recent-apps-list');
+  const recent = APPLICATIONS.filter(a => a.status === 'pending').slice(0,3);
+  el.innerHTML = recent.map(app => `
+    <div class="timeline-item" style="cursor:pointer;" onclick="openReview(${app.id})">
+      <div class="timeline-dot" style="background:var(--gold);"></div>
+      <div class="timeline-content">
+        <h4>${app.name}</h4>
+        <p>${app.location} · Applied ${app.applied}</p>
+        <span class="status-badge status-pending" style="margin-top:8px;">Pending Review</span>
+      </div>
+    </div>
+  `).join('') || '<p style="color:var(--grey); font-size:12px; padding:16px 0;">No pending applications.</p>';
+}
+
+function updatePendingBadge() {
+  const count = APPLICATIONS.filter(a => a.status === 'pending').length;
+  document.getElementById('pending-count-badge').textContent = count;
+  document.getElementById('dash-pending').textContent = count;
+}
+
+// ═══════════════════════════════════════════════
+//  APPLICATION ACTIONS
+// ═══════════════════════════════════════════════
+function openReview(id) {
+  const app = APPLICATIONS.find(a => a.id === id);
+  if (!app) return;
+  currentApp = app;
+
+  document.getElementById('modal-name').textContent = app.name;
+  document.getElementById('modal-meta').textContent = `Applied ${app.applied} · ${app.location}`;
+  document.getElementById('modal-email').textContent = app.email;
+  document.getElementById('modal-heritage').textContent = app.heritage;
+
+  const pendingActions = document.getElementById('modal-pending-actions');
+  const decidedActions = document.getElementById('modal-decided-actions');
+  const pwRow = document.getElementById('modal-password-row');
+
+  if (app.status === 'pending') {
+    pendingActions.style.display = 'flex';
+    decidedActions.style.display = 'none';
+    pwRow.style.display = 'none';
+  } else {
+    pendingActions.style.display = 'none';
+    decidedActions.style.display = 'flex';
+    pwRow.style.display = 'none';
+  }
+
+  document.getElementById('modal-review').classList.add('open');
+}
+
+function approveApplication() {
+  if (!currentApp) return;
+  const pass = generatePassword();
+  document.getElementById('modal-temp-pass').textContent = pass;
+  document.getElementById('modal-password-row').style.display = 'block';
+  document.getElementById('modal-pending-actions').style.display = 'none';
+  document.getElementById('modal-decided-actions').style.display = 'flex';
+
+  currentApp.status = 'approved';
+
+  const accessLevel = document.getElementById('modal-access-select').value;
+  USERS.push({
+    id: USERS.length + 1,
+    name: currentApp.name,
+    email: currentApp.email,
+    password: pass,
+    location: currentApp.location,
+    access: accessLevel,
+    since: 'March 2026',
+    lastLogin: 'Never',
+    status: 'active'
+  });
+
+  renderApplications();
+  renderMembers();
+  renderRecentApps();
+  updatePendingBadge();
+  populateMemberSelect();
+  logActivity('Approved', currentApp.name, `Application approved — ${accessLevel} access granted`);
+  showToast(`✓ ${currentApp.name} approved. Temporary password generated.`);
+}
+
+function rejectApplication() {
+  if (!currentApp) return;
+  currentApp.status = 'rejected';
+  document.getElementById('modal-pending-actions').style.display = 'none';
+  document.getElementById('modal-decided-actions').style.display = 'flex';
+  renderApplications();
+  renderRecentApps();
+  updatePendingBadge();
+  logActivity('Rejected', currentApp.name, 'Application rejected');
+  showToast(`Application from ${currentApp.name} rejected.`, true);
+}
+
+function quickApprove(id) {
+  const app = APPLICATIONS.find(a => a.id === id);
+  if (app) { currentApp = app; approveApplication(); }
+}
+
+function quickReject(id) {
+  const app = APPLICATIONS.find(a => a.id === id);
+  if (app) { currentApp = app; rejectApplication(); }
+}
+
+function updateAccess(id, level) {
+  const user = USERS.find(u => u.id === id);
+  if (user) { user.access = level; showToast(`Access level updated for ${user.name}`); }
+}
+
+function revokeMember(id) {
+  const user = USERS.find(u => u.id === id);
+  if (user && confirm(`Revoke access for ${user.name}?`)) {
+    USERS.splice(USERS.indexOf(user), 1);
+    renderMembers();
+    populateMemberSelect();
+    logActivity('Revoked', user.name, 'Access revoked by administrator');
+    showToast(`Access revoked for ${user.name}`, true);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  INVITATIONS & PASSWORDS
+// ═══════════════════════════════════════════════
+function generatePassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+  let pass = 'Preston-';
+  for (let i = 0; i < 8; i++) pass += chars[Math.floor(Math.random() * chars.length)];
+  return pass;
+}
+
+function generateTempPassword() {
+  document.getElementById('temp-password').textContent = generatePassword();
+}
+
+function genNewPass() {
+  document.getElementById('new-temp-pass').textContent = generatePassword();
+}
+
+function showGeneratePasswordModal() {
+  genNewPass();
+  document.getElementById('modal-password').classList.add('open');
+}
+
+function sendNewPassword() {
+  const sel = document.getElementById('pw-member-select');
+  const name = sel.options[sel.selectedIndex].text;
+  closeModal('modal-password');
+  showToast(`Password reset sent to ${name}`);
+  logActivity('Password Reset', name, 'Administrator generated new temporary password');
+}
+
+function populateMemberSelect() {
+  const sel = document.getElementById('pw-member-select');
+  sel.innerHTML = USERS.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+}
+
+function sendInvitation() {
+  const name = document.getElementById('inv-name').value.trim();
+  const email = document.getElementById('inv-email').value.trim();
+  const location = document.getElementById('inv-location').value.trim();
+  const access = document.getElementById('inv-access').value;
+  const pass = document.getElementById('temp-password').textContent;
+
+  if (!name || !email) { showToast('Please fill in name and email', true); return; }
+
+  USERS.push({
+    id: USERS.length + 1,
+    name, email, location,
+    password: pass,
+    access,
+    since: 'March 2026',
+    lastLogin: 'Never',
+    status: 'active'
+  });
+
+  renderMembers();
+  populateMemberSelect();
+  logActivity('Invited', name, `Direct invitation sent — ${access} access`);
+  document.getElementById('invite-success').style.display = 'block';
+  document.getElementById('inv-name').value = '';
+  document.getElementById('inv-email').value = '';
+  document.getElementById('inv-location').value = '';
+  document.getElementById('inv-note').value = '';
+  generateTempPassword();
+  showToast(`✓ Invitation sent to ${name}`);
+}
+
+// ═══════════════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════════════
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function showChangePassword() {
+  document.getElementById('modal-change-pw').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════
+//  ACTIVITY LOG
+// ═══════════════════════════════════════════════
+function logActivity(event, user, detail) {
+  ACTIVITY.unshift({ event, user, detail, time: 'Just now' });
+  renderActivity();
+}
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+function showToast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
