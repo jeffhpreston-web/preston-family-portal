@@ -906,7 +906,9 @@ async function approveApp(id, email, name) {
 
 async function rejectApp(id) {
   if (!confirm('Reject this application?')) return;
+  const {data:_ra} = await sb.from('applications').select('full_name,email').eq('id',id).single();
   await sb.from('applications').update({ status: 'rejected', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() }).eq('id', id);
+  if (_ra) emailApplicationRejected(_ra.full_name, _ra.email).catch(()=>{});
   await loadAdminData();
 }
 
