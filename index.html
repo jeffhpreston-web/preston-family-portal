@@ -3,62 +3,1039 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Preston Collection — Family Access</title>
+<title>Preston Collection â Family Access</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-body{background:#000;color:#e8e8e8;font-family:Montserrat,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
-.box{background:#111;border:1px solid #2a2a2a;padding:48px;max-width:420px;width:100%;}
-h1{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;margin-bottom:8px;}
-p{color:#888;font-size:13px;margin-bottom:32px;}
-input{width:100%;background:#000;border:1px solid #2a2a2a;color:#e8e8e8;padding:12px;font-size:14px;margin-bottom:16px;box-sizing:border-box;outline:none;}
-input:focus{border-color:#b8972a;}
-button{width:100%;background:#c0392b;color:#fff;border:none;padding:14px;font-size:12px;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;}
-.msg{margin-top:16px;font-size:12px;text-align:center;color:#b8972a;}
-.err{color:#e74c3c;}
+  /* ââ CONFIG: swap these two lines with your real values ââ */
+  /* SUPABASE_URL and SUPABASE_ANON_KEY are set in the <script> below */
+
+  :root {
+    --black: #000000; --deep: #0a0a0a; --surface: #111111;
+    --surface2: #1a1a1a; --border: #2a2a2a; --border-light: #333333;
+    --red: #c0392b; --red-hover: #e74c3c;
+    --gold: #b8972a; --gold-light: #d4a843;
+    --white: #ffffff; --grey: #888888; --grey-light: #aaaaaa;
+    --text: #e8e8e8;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--black); color:var(--text); font-family:'Montserrat',sans-serif;
+         font-weight:300; min-height:100vh; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(192,57,43,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 90%, rgba(184,151,42,0.03) 0%, transparent 60%);
+    pointer-events:none; z-index:0; }
+
+  .view { display:none; min-height:100vh; position:relative; z-index:1; }
+  .view.active { display:flex; flex-direction:column; }
+
+  /* ââ HEADER ââ */
+  header { display:flex; align-items:center; justify-content:space-between;
+           padding:28px 48px; border-bottom:1px solid var(--border);
+           background:rgba(0,0,0,0.6); backdrop-filter:blur(10px);
+           position:sticky; top:0; z-index:100; }
+  .logo { display:flex; align-items:center; gap:16px; text-decoration:none; }
+  .logo-emblem { width:52px; height:52px; border-radius:50%;
+                 border:1.5px solid var(--gold);
+                 display:flex; align-items:center; justify-content:center;
+                 flex-direction:column; gap:1px; }
+  .logo-emblem span { font-family:'Cormorant Garamond',serif; font-size:10px;
+                       color:var(--gold); letter-spacing:0.15em; text-transform:uppercase;
+                       line-height:1.2; text-align:center; }
+  .logo-text { font-family:'Cormorant Garamond',serif; font-size:22px;
+               color:var(--white); font-weight:400; letter-spacing:0.08em; }
+  .logo-text small { display:block; font-size:10px; font-family:'Montserrat',sans-serif;
+                     font-weight:300; color:var(--grey); letter-spacing:0.25em;
+                     text-transform:uppercase; }
+  nav a { color:var(--grey); text-decoration:none; font-size:11px;
+          letter-spacing:0.2em; text-transform:uppercase; transition:color 0.3s;
+          cursor:pointer; }
+  nav a:hover { color:var(--white); }
+  .nav-right { display:flex; align-items:center; gap:24px; }
+  .btn-header { background:var(--red); color:var(--white); border:none;
+                padding:10px 24px; font-size:11px; letter-spacing:0.15em;
+                text-transform:uppercase; cursor:pointer; transition:background 0.3s; }
+  .btn-header:hover { background:var(--red-hover); }
+
+  /* ââ HERO ââ */
+  .hero { flex:1; display:grid; grid-template-columns:1fr 1fr;
+          min-height:calc(100vh - 110px); }
+  .hero-left { display:flex; flex-direction:column; justify-content:center;
+               padding:80px 48px; border-right:1px solid var(--border); }
+  .hero-eyebrow { font-size:10px; letter-spacing:0.3em; text-transform:uppercase;
+                  color:var(--gold); margin-bottom:24px; }
+  .hero-title { font-family:'Cormorant Garamond',serif; font-size:clamp(42px,5vw,68px);
+                font-weight:300; line-height:1.1; margin-bottom:32px; }
+  .hero-title em { color:var(--gold); font-style:italic; }
+  .hero-body { color:var(--grey-light); font-size:14px; line-height:1.8;
+               max-width:480px; margin-bottom:48px; }
+  .stats { display:flex; gap:0; margin-bottom:48px; }
+  .stat { padding:0 32px 0 0; border-right:1px solid var(--border); margin-right:32px; }
+  .stat:last-child { border:none; }
+  .stat-num { font-family:'Cormorant Garamond',serif; font-size:36px;
+              color:var(--white); font-weight:300; }
+  .stat-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase;
+                color:var(--grey); margin-top:4px; }
+  .hero-actions { display:flex; gap:16px; }
+  .btn-outline { background:transparent; border:1px solid var(--gold);
+                 color:var(--gold); padding:14px 32px; font-size:11px;
+                 letter-spacing:0.15em; text-transform:uppercase; cursor:pointer;
+                 transition:all 0.3s; }
+  .btn-outline:hover { background:var(--gold); color:var(--black); }
+  .btn-ghost { background:transparent; border:1px solid var(--border);
+               color:var(--grey); padding:14px 32px; font-size:11px;
+               letter-spacing:0.15em; text-transform:uppercase; cursor:pointer;
+               transition:all 0.3s; }
+  .btn-ghost:hover { border-color:var(--grey-light); color:var(--white); }
+
+  /* ââ LOGIN PANEL ââ */
+  .hero-right { display:flex; flex-direction:column; justify-content:center;
+                padding:80px 48px; background:var(--deep); }
+  .panel-label { font-size:9px; letter-spacing:0.3em; text-transform:uppercase;
+                 color:var(--gold); margin-bottom:32px; }
+  .panel-title { font-family:'Cormorant Garamond',serif; font-size:32px;
+                 font-weight:300; margin-bottom:8px; }
+  .panel-sub { font-size:12px; color:var(--grey); margin-bottom:40px; }
+  .form-group { margin-bottom:20px; }
+  .form-label { display:block; font-size:10px; letter-spacing:0.15em;
+                text-transform:uppercase; color:var(--grey); margin-bottom:8px; }
+  .form-input { width:100%; background:var(--surface); border:1px solid var(--border);
+                color:var(--text); padding:14px 16px; font-size:14px;
+                font-family:'Montserrat',sans-serif; transition:border-color 0.3s;
+                outline:none; }
+  .form-input:focus { border-color:var(--gold); }
+  .form-input::placeholder { color:var(--border-light); }
+  .form-textarea { resize:vertical; min-height:100px; }
+  .btn-primary { width:100%; background:var(--red); color:var(--white); border:none;
+                 padding:16px; font-size:12px; letter-spacing:0.2em;
+                 text-transform:uppercase; cursor:pointer; transition:background 0.3s;
+                 font-family:'Montserrat',sans-serif; margin-top:8px; }
+  .btn-primary:hover { background:var(--red-hover); }
+  .btn-primary:disabled { background:var(--border); cursor:not-allowed; }
+  .form-divider { display:flex; align-items:center; gap:16px; margin:24px 0;
+                  color:var(--border-light); font-size:10px; letter-spacing:0.2em; }
+  .form-divider::before, .form-divider::after { content:''; flex:1;
+                                                 height:1px; background:var(--border); }
+  .form-links { display:flex; flex-direction:column; gap:12px; align-items:center; }
+  .form-link { color:var(--gold); font-size:12px; cursor:pointer; text-decoration:none;
+               letter-spacing:0.05em; transition:color 0.3s; background:none;
+               border:none; font-family:'Montserrat',sans-serif; }
+  .form-link:hover { color:var(--gold-light); }
+  .admin-section { margin-top:32px; padding-top:24px; border-top:1px solid var(--border);
+                   text-align:center; }
+  .admin-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase;
+                 color:var(--border-light); margin-bottom:8px; }
+  .alert { padding:12px 16px; margin-bottom:16px; font-size:12px; border-radius:0; }
+  .alert-error { background:rgba(192,57,43,0.15); border:1px solid rgba(192,57,43,0.4);
+                 color:#e74c3c; }
+  .alert-success { background:rgba(184,151,42,0.1); border:1px solid rgba(184,151,42,0.3);
+                   color:var(--gold-light); }
+  .alert-info { background:rgba(255,255,255,0.05); border:1px solid var(--border);
+                color:var(--grey-light); }
+
+  /* ââ MEMBER PORTAL ââ */
+  .portal-layout { display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  .sidebar { background:var(--deep); border-right:1px solid var(--border);
+             padding:32px 0; display:flex; flex-direction:column; }
+  .sidebar-profile { padding:0 24px 32px; border-bottom:1px solid var(--border);
+                     margin-bottom:24px; }
+  .profile-avatar { width:56px; height:56px; border-radius:50%;
+                    border:1.5px solid var(--gold); display:flex; align-items:center;
+                    justify-content:center; margin-bottom:16px; background:var(--surface2); }
+  .profile-avatar span { font-family:'Cormorant Garamond',serif; font-size:22px;
+                          color:var(--gold); }
+  .profile-name { font-size:16px; font-weight:400; margin-bottom:4px; }
+  .profile-meta { font-size:10px; color:var(--grey); letter-spacing:0.1em; }
+  .profile-badge { display:inline-block; margin-top:8px; padding:3px 10px;
+                   background:rgba(184,151,42,0.15); border:1px solid rgba(184,151,42,0.3);
+                   color:var(--gold); font-size:9px; letter-spacing:0.15em;
+                   text-transform:uppercase; }
+  .sidebar-nav { flex:1; }
+  .nav-item { display:flex; align-items:center; gap:12px; padding:12px 24px;
+              color:var(--grey); font-size:11px; letter-spacing:0.1em;
+              text-transform:uppercase; cursor:pointer; transition:all 0.2s;
+              border-left:2px solid transparent; }
+  .nav-item:hover { color:var(--white); background:rgba(255,255,255,0.03); }
+  .nav-item.active { color:var(--gold); border-left-color:var(--gold);
+                     background:rgba(184,151,42,0.05); }
+  .nav-icon { font-size:14px; width:20px; text-align:center; }
+  .main-content { padding:48px; overflow-y:auto; }
+  .page-header { margin-bottom:40px; }
+  .page-title { font-family:'Cormorant Garamond',serif; font-size:36px;
+                font-weight:300; margin-bottom:8px; }
+  .page-sub { color:var(--grey); font-size:13px; }
+
+  /* ââ COLLECTION GRID ââ */
+  .collection-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr));
+                     gap:24px; margin-top:32px; }
+  .collection-card { background:var(--surface); border:1px solid var(--border);
+                     padding:28px; cursor:pointer; transition:all 0.3s; position:relative; }
+  .collection-card:hover { border-color:var(--gold); background:var(--surface2); }
+  .collection-card::before { content:''; position:absolute; top:0; left:0;
+                              width:2px; height:0; background:var(--gold);
+                              transition:height 0.3s; }
+  .collection-card:hover::before { height:100%; }
+  .card-icon { font-size:28px; margin-bottom:16px; }
+  .card-title { font-family:'Cormorant Garamond',serif; font-size:18px;
+                font-weight:400; margin-bottom:8px; }
+  .card-count { font-size:11px; color:var(--grey); letter-spacing:0.1em; }
+
+  /* ââ ADMIN PANEL ââ */
+  .admin-layout { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+  .dash-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:20px;
+                margin-bottom:40px; }
+  .dash-stat { background:var(--surface); border:1px solid var(--border); padding:24px; }
+  .dash-stat-num { font-family:'Cormorant Garamond',serif; font-size:40px;
+                   color:var(--gold); font-weight:300; }
+  .dash-stat-label { font-size:10px; color:var(--grey); letter-spacing:0.15em;
+                     text-transform:uppercase; margin-top:4px; }
+
+  /* ââ TABLES ââ */
+  .data-table { width:100%; border-collapse:collapse; }
+  .data-table th { text-align:left; padding:12px 16px; font-size:9px;
+                   letter-spacing:0.2em; text-transform:uppercase; color:var(--grey);
+                   border-bottom:1px solid var(--border); font-weight:400; }
+  .data-table td { padding:16px; font-size:13px; border-bottom:1px solid var(--border);
+                   vertical-align:top; }
+  .data-table tr:hover td { background:rgba(255,255,255,0.02); }
+  .badge { display:inline-block; padding:3px 10px; font-size:9px; letter-spacing:0.1em;
+           text-transform:uppercase; }
+  .badge-pending { background:rgba(255,165,0,0.15); border:1px solid rgba(255,165,0,0.3); color:orange; }
+  .badge-approved { background:rgba(184,151,42,0.15); border:1px solid rgba(184,151,42,0.3); color:var(--gold); }
+  .badge-rejected { background:rgba(192,57,43,0.15); border:1px solid rgba(192,57,43,0.3); color:#e74c3c; }
+  .badge-full { background:rgba(0,200,100,0.1); border:1px solid rgba(0,200,100,0.3); color:#4caf50; }
+  .badge-view { background:rgba(100,150,255,0.1); border:1px solid rgba(100,150,255,0.3); color:#6699ff; }
+  .btn-sm { padding:6px 16px; font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
+            cursor:pointer; border:none; transition:all 0.2s; font-family:'Montserrat',sans-serif; }
+  .btn-approve { background:rgba(184,151,42,0.2); color:var(--gold);
+                 border:1px solid rgba(184,151,42,0.4); }
+  .btn-approve:hover { background:var(--gold); color:var(--black); }
+  .btn-reject { background:rgba(192,57,43,0.2); color:#e74c3c;
+                border:1px solid rgba(192,57,43,0.4); }
+  .btn-reject:hover { background:var(--red); color:var(--white); }
+  .btn-danger { background:rgba(192,57,43,0.2); color:#e74c3c;
+                border:1px solid rgba(192,57,43,0.4); }
+  .empty-state { text-align:center; padding:64px 32px; color:var(--grey); }
+  .empty-state .empty-icon { font-size:48px; margin-bottom:16px; opacity:0.4; }
+  .loading { text-align:center; padding:48px; color:var(--grey); font-size:13px;
+             letter-spacing:0.1em; }
+  .section-header { display:flex; justify-content:space-between; align-items:center;
+                    margin-bottom:24px; }
+  .select-input { background:var(--surface); border:1px solid var(--border);
+                  color:var(--text); padding:6px 12px; font-size:12px;
+                  font-family:'Montserrat',sans-serif; outline:none; cursor:pointer; }
+
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@300;400;500&display=swap');
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
 </head>
 <body>
-<div class="box">
-  <h1>Preston Collection</h1>
-  <p>Family Member Access — Sign in below</p>
-  <div id="msg"></div>
-  <input type="email" id="email" placeholder="Email address">
-  <input type="password" id="password" placeholder="Password">
-  <button onclick="login()">Sign In to Collection</button>
-  <div class="msg" style="margin-top:24px;font-size:11px;color:#444;">
-    <a href="#" onclick="showReset()" style="color:#b8972a;">Forgot password?</a> &nbsp;|&nbsp; 
-    <a href="https://prestoncollection.net" style="color:#666;">← Public Site</a>
+
+<!-- ââââââââââââââââââââââââââââââââââââââââââââ
+     VIEW 1: PUBLIC LOGIN
+ââââââââââââââââââââââââââââââââââââââââââââ -->
+<div id="view-login" class="view active">
+  <header>
+    <a class="logo" href="#">
+      <div class="logo-emblem">
+        <span>PRESTON</span>
+        <span>COLLECTION</span>
+      </div>
+      <div class="logo-text">
+        The Preston Collection
+        <small>Est. 1865 Â· Originated c.1625</small>
+      </div>
+    </a>
+    <nav class="nav-right">
+      <a onclick="showView('view-login')" style="color:var(--gold)">Family Portal</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-eyebrow">Private Family Access</div>
+      <h1 class="hero-title">Eight Generations<br>of <em>Living</em> History</h1>
+      <p class="hero-body">The Preston Collection is a privately held family archive spanning over 400 years â from manuscripts and fine art to coins, jewelry, and historical memorabilia. This portal grants verified family members exclusive access to the full collection.</p>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-num">400+</div>
+          <div class="stat-label">Years of History</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">8+</div>
+          <div class="stat-label">Generations</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">12</div>
+          <div class="stat-label">Categories</div>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-outline" onclick="showPanel('panel-apply')">+ Request Family Access</button>
+        <a href="https://prestoncollection.net" class="btn-ghost" style="display:inline-flex;align-items:center;text-decoration:none;">â Public Site</a>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <!-- LOGIN PANEL -->
+      <div id="panel-login">
+        <div class="panel-label">Verified Access Only</div>
+        <h2 class="panel-title">Sign In</h2>
+        <p class="panel-sub">Access the complete Preston Collection</p>
+        <div id="login-alert"></div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="login-email" class="form-input" placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢">
+        </div>
+        <button class="btn-primary" id="login-btn" onclick="handleLogin()">Sign In to Collection</button>
+        <div class="form-divider">or</div>
+        <div class="form-links">
+          <button class="form-link" onclick="showPanel('panel-apply')">Request Family Access â</button>
+          <button class="form-link" onclick="showPanel('panel-reset')">Forgot password?</button>
+        </div>
+        <div class="admin-section">
+          <div class="admin-label">Admin</div>
+          <button class="form-link" onclick="showPanel('panel-admin-login')">Administrator Portal â</button>
+        </div>
+      </div>
+
+      <!-- APPLY PANEL -->
+      <div id="panel-apply" style="display:none">
+        <div class="panel-label">Family Access Request</div>
+        <h2 class="panel-title">Join the Portal</h2>
+        <p class="panel-sub">Tell us about your connection to the Preston family</p>
+        <div id="apply-alert"></div>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="apply-name" class="form-input" placeholder="Your full name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="apply-email" class="form-input" placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input type="text" id="apply-location" class="form-input" placeholder="City, Country">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Your Preston Family Connection</label>
+          <textarea id="apply-heritage" class="form-input form-textarea" placeholder="Describe your connection to the Preston family â your branch, generation, relation to known family members..."></textarea>
+        </div>
+        <button class="btn-primary" id="apply-btn" onclick="handleApply()">Submit Request</button>
+        <div class="form-divider">or</div>
+        <div class="form-links">
+          <button class="form-link" onclick="showPanel('panel-login')">â Back to Sign In</button>
+        </div>
+      </div>
+
+      <!-- RESET PANEL -->
+      <div id="panel-reset" style="display:none">
+        <div class="panel-label">Account Recovery</div>
+        <h2 class="panel-title">Reset Password</h2>
+        <p class="panel-sub">We'll send a reset link to your email</p>
+        <div id="reset-alert"></div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="reset-email" class="form-input" placeholder="your@email.com">
+        </div>
+        <button class="btn-primary" id="reset-btn" onclick="handleReset()">Send Reset Link</button>
+        <div class="form-divider">or</div>
+        <div class="form-links">
+          <button class="form-link" onclick="showPanel('panel-login')">â Back to Sign In</button>
+        </div>
+      </div>
+
+      <!-- ADMIN LOGIN PANEL -->
+      <div id="panel-admin-login" style="display:none">
+        <div class="panel-label">Admin Access</div>
+        <h2 class="panel-title">Administrator Login</h2>
+        <p class="panel-sub">Restricted to collection administrators</p>
+        <div id="admin-login-alert"></div>
+        <div class="form-group">
+          <label class="form-label">Admin Email</label>
+          <input type="email" id="admin-email" class="form-input" placeholder="admin@prestoncollection.net">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Admin Password</label>
+          <input type="password" id="admin-password" class="form-input" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢">
+        </div>
+        <button class="btn-primary" id="admin-login-btn" onclick="handleAdminLogin()">Access Admin Panel</button>
+        <div class="form-divider">or</div>
+        <div class="form-links">
+          <button class="form-link" onclick="showPanel('panel-login')">â Back to Sign In</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
-<script>
-const sb = supabase.createClient(
-  'https://witvlkcjvzxxajdwzdep.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpdHZsa2Nqdnp4eGFqZHd6ZGVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NTk0MDIsImV4cCI6MjA4OTAzNTQwMn0.miKL5P-oTz4r1eTE4mCVdr9nbPv43aAzQQ2fREG1PVc'
-);
 
-async function login() {
-  const email = document.getElementById('email').value.trim();
-  const pwd = document.getElementById('password').value;
-  const msg = document.getElementById('msg');
-  msg.innerHTML = '<span style="color:#888">Signing in...</span>';
-  const {data, error} = await sb.auth.signInWithPassword({email, password: pwd});
-  if (error) { msg.innerHTML = '<span class="err">' + error.message + '</span>'; return; }
-  const {data: profile} = await sb.from('profiles').select('*').eq('id', data.user.id).single();
-  if (profile?.access_level === 'admin') {
-    window.location.href = 'https://jeffhpreston-web.github.io/preston-family-portal/admin.html';
-  } else if (['full_member','view_only','contributor'].includes(profile?.access_level)) {
-    msg.innerHTML = '<span style="color:#b8972a">Welcome, ' + (profile.full_name || email) + '! Portal loading...</span>';
+<!-- ââââââââââââââââââââââââââââââââââââââââââââ
+     VIEW 2: MEMBER PORTAL
+ââââââââââââââââââââââââââââââââââââââââââââ -->
+<div id="view-member" class="view">
+  <div class="portal-layout">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="profile-avatar"><span id="member-initial">J</span></div>
+        <div class="profile-name" id="member-name">Family Member</div>
+        <div class="profile-meta" id="member-id">PRESTON-XXXXXXXX</div>
+        <div class="profile-badge" id="member-badge">Full Member</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" onclick="showMemberSection('section-collection')" id="nav-collection">
+          <span class="nav-icon">â</span> Collection
+        </div>
+        <div class="nav-item" onclick="showMemberSection('section-contribute')" id="nav-contribute">
+          <span class="nav-icon">â</span> Contribute
+        </div>
+        <div class="nav-item" onclick="showMemberSection('section-profile')" id="nav-profile">
+          <span class="nav-icon">â</span> My Profile
+        </div>
+      </nav>
+      <div style="padding:24px; border-top:1px solid var(--border); margin-top:auto;">
+        <button class="btn-ghost" style="width:100%; font-size:10px;" onclick="handleSignOut()">Sign Out</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <!-- COLLECTION SECTION -->
+      <div id="section-collection">
+        <div class="page-header">
+          <h1 class="page-title">The Collection</h1>
+          <p class="page-sub">Browse the complete Preston family archive</p>
+        </div>
+        <div class="collection-grid">
+          <div class="collection-card"><div class="card-icon">ð</div><div class="card-title">Books & Manuscripts</div><div class="card-count">Rare texts & documents</div></div>
+          <div class="collection-card"><div class="card-icon">ðª</div><div class="card-title">Coins & Currency</div><div class="card-count">Historical coinage</div></div>
+          <div class="collection-card"><div class="card-icon">ð¨</div><div class="card-title">Fine Art & Prints</div><div class="card-count">Paintings & artwork</div></div>
+          <div class="collection-card"><div class="card-icon">â±</div><div class="card-title">Horology</div><div class="card-count">Timepieces & clocks</div></div>
+          <div class="collection-card"><div class="card-icon">ðº</div><div class="card-title">Maps & Lithographs</div><div class="card-count">Historical cartography</div></div>
+          <div class="collection-card"><div class="card-icon">â¾</div><div class="card-title">Sports Cards & Memorabilia</div><div class="card-count">Trading cards & collectibles</div></div>
+          <div class="collection-card"><div class="card-icon">ð</div><div class="card-title">Jewelry</div><div class="card-count">Family heirlooms</div></div>
+          <div class="collection-card"><div class="card-icon">ð</div><div class="card-title">Comics & Magazines</div><div class="card-count">Vintage publications</div></div>
+        </div>
+      </div>
+
+      <!-- CONTRIBUTE SECTION -->
+      <div id="section-contribute" style="display:none">
+        <div class="page-header">
+          <h1 class="page-title">Contribute</h1>
+          <p class="page-sub">Submit items for inclusion in the family collection</p>
+        </div>
+        <div id="contribute-alert"></div>
+        <div style="max-width:600px;">
+          <div class="form-group">
+            <label class="form-label">Item Title</label>
+            <input type="text" id="contrib-title" class="form-input" placeholder="Name of the item">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select id="contrib-category" class="form-input select-input">
+              <option value="books_manuscripts">Books & Manuscripts</option>
+              <option value="coins_currency">Coins & Currency</option>
+              <option value="fine_art">Fine Art & Prints</option>
+              <option value="horology">Horology</option>
+              <option value="maps_lithographs">Maps & Lithographs</option>
+              <option value="sports_cards">Sports Cards</option>
+              <option value="sports_memorabilia">Sports Memorabilia</option>
+              <option value="jewelry">Jewelry</option>
+              <option value="comics_magazines">Comics & Magazines</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea id="contrib-desc" class="form-input form-textarea" placeholder="Describe the item â what it is, its significance..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Provenance / History</label>
+            <textarea id="contrib-provenance" class="form-input form-textarea" placeholder="How did you come to have this? What do you know about its history?"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Approximate Era</label>
+            <input type="text" id="contrib-era" class="form-input" placeholder="e.g. 1880s, Victorian, Early 20th Century">
+          </div>
+          <button class="btn-primary" style="max-width:300px;" onclick="handleContribute()">Submit for Review</button>
+        </div>
+      </div>
+
+      <!-- PROFILE SECTION -->
+      <div id="section-profile" style="display:none">
+        <div class="page-header">
+          <h1 class="page-title">My Profile</h1>
+          <p class="page-sub">Manage your family portal account</p>
+        </div>
+        <div id="profile-alert"></div>
+        <div style="max-width:500px;">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="profile-name" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Generation</label>
+            <input type="text" id="profile-generation" class="form-input" placeholder="e.g. 7th Generation">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location</label>
+            <input type="text" id="profile-location" class="form-input" placeholder="City, Country">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Family Branch</label>
+            <input type="text" id="profile-branch" class="form-input" placeholder="e.g. Australian branch, London line">
+          </div>
+          <button class="btn-primary" style="max-width:240px;" onclick="handleProfileSave()">Save Changes</button>
+          <div style="margin-top:32px; padding-top:32px; border-top:1px solid var(--border);">
+            <div class="panel-label" style="margin-bottom:16px;">Change Password</div>
+            <div class="form-group">
+              <label class="form-label">New Password</label>
+              <input type="password" id="new-password" class="form-input" placeholder="Min 8 characters">
+            </div>
+            <button class="btn-primary" style="max-width:240px;" onclick="handlePasswordChange()">Update Password</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ââââââââââââââââââââââââââââââââââââââââââââ
+     VIEW 3: ADMIN PANEL
+ââââââââââââââââââââââââââââââââââââââââââââ -->
+<div id="view-admin" class="view">
+  <div class="admin-layout">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="profile-avatar"><span>A</span></div>
+        <div class="profile-name">Administrator</div>
+        <div class="profile-meta">Preston Collection</div>
+        <div class="profile-badge" style="background:rgba(192,57,43,0.15);border-color:rgba(192,57,43,0.3);color:#e74c3c;">Admin</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" onclick="showAdminSection('admin-dashboard')" id="anav-dashboard">
+          <span class="nav-icon">â</span> Dashboard
+        </div>
+        <div class="nav-item" onclick="showAdminSection('admin-applications')" id="anav-applications">
+          <span class="nav-icon">ð</span> Applications
+          <span id="pending-badge" style="margin-left:auto;background:var(--red);color:white;font-size:9px;padding:2px 6px;border-radius:2px;"></span>
+        </div>
+        <div class="nav-item" onclick="showAdminSection('admin-members')" id="anav-members">
+          <span class="nav-icon">ð¥</span> Members
+        </div>
+        <div class="nav-item" onclick="showAdminSection('admin-contributions')" id="anav-contributions">
+          <span class="nav-icon">â</span> Contributions
+        </div>
+        <div class="nav-item" onclick="showAdminSection('admin-invite')" id="anav-invite">
+          <span class="nav-icon">â</span> Send Invitation
+        </div>
+        <div class="nav-item" onclick="showAdminSection('admin-activity')" id="anav-activity">
+          <span class="nav-icon">ð</span> Activity Log
+        </div>
+      </nav>
+      <div style="padding:24px; border-top:1px solid var(--border); margin-top:auto;">
+        <button class="btn-ghost" style="width:100%; font-size:10px;" onclick="handleSignOut()">Sign Out</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+
+      <!-- DASHBOARD -->
+      <div id="admin-dashboard">
+        <div class="page-header">
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-sub">Preston Collection Family Portal â Administration</p>
+        </div>
+        <div class="dash-stats">
+          <div class="dash-stat"><div class="dash-stat-num" id="dash-members">â</div><div class="dash-stat-label">Active Members</div></div>
+          <div class="dash-stat"><div class="dash-stat-num" id="dash-pending">â</div><div class="dash-stat-label">Pending Applications</div></div>
+          <div class="dash-stat"><div class="dash-stat-num" id="dash-contributions">â</div><div class="dash-stat-label">Pending Contributions</div></div>
+          <div class="dash-stat"><div class="dash-stat-num" id="dash-total">â</div><div class="dash-stat-label">Total Members</div></div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);padding:28px;">
+          <div class="section-header"><h3 style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;">Recent Applications</h3></div>
+          <div id="recent-apps-list"><div class="loading">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- APPLICATIONS -->
+      <div id="admin-applications" style="display:none">
+        <div class="page-header">
+          <h1 class="page-title">Applications</h1>
+          <p class="page-sub">Review and approve family access requests</p>
+        </div>
+        <div id="applications-list"><div class="loading">Loading...</div></div>
+      </div>
+
+      <!-- MEMBERS -->
+      <div id="admin-members" style="display:none">
+        <div class="page-header section-header">
+          <div><h1 class="page-title">Family Members</h1><p class="page-sub">Manage portal access</p></div>
+        </div>
+        <div id="members-list"><div class="loading">Loading...</div></div>
+      </div>
+
+      <!-- CONTRIBUTIONS -->
+      <div id="admin-contributions" style="display:none">
+        <div class="page-header">
+          <h1 class="page-title">Contributions</h1>
+          <p class="page-sub">Review submitted collection items</p>
+        </div>
+        <div id="contributions-list"><div class="loading">Loading...</div></div>
+      </div>
+
+      <!-- INVITE -->
+      <div id="admin-invite" style="display:none">
+        <div class="page-header">
+          <h1 class="page-title">Send Invitation</h1>
+          <p class="page-sub">Directly invite a known family member</p>
+        </div>
+        <div id="invite-alert"></div>
+        <div style="max-width:500px;">
+          <div class="form-group"><label class="form-label">Full Name</label><input type="text" id="invite-name" class="form-input" placeholder="Family member's name"></div>
+          <div class="form-group"><label class="form-label">Email Address</label><input type="email" id="invite-email" class="form-input" placeholder="their@email.com"></div>
+          <div class="form-group">
+            <label class="form-label">Access Level</label>
+            <select id="invite-access" class="form-input select-input">
+              <option value="full_member">Full Member</option>
+              <option value="view_only">View Only</option>
+              <option value="contributor">Contributor</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Personal Message (optional)</label><textarea id="invite-message" class="form-input form-textarea" placeholder="Add a personal note to the invitation..."></textarea></div>
+          <button class="btn-primary" style="max-width:260px;" onclick="handleSendInvite()">Send Invitation</button>
+        </div>
+      </div>
+
+      <!-- ACTIVITY -->
+      <div id="admin-activity" style="display:none">
+        <div class="page-header">
+          <h1 class="page-title">Activity Log</h1>
+          <p class="page-sub">Recent portal activity</p>
+        </div>
+        <div id="activity-list"><div class="loading">Loading...</div></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+// ââââââââââââââââââââââââââââââââââââââââââââ
+// CONFIGURATION â replace with your values
+// ââââââââââââââââââââââââââââââââââââââââââââ
+const SUPABASE_URL = 'https://witvlkcjvzxxajdwzdep.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpdHZsa2Nqdnp4eGFqZHd6ZGVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NTk0MDIsImV4cCI6MjA4OTAzNTQwMn0.miKL5P-oTz4r1eTE4mCVdr9nbPv43aAzQQ2fREG1PVc';
+
+// ââââââââââââââââââââââââââââââââââââââââââââ
+// INIT SUPABASE
+// ââââââââââââââââââââââââââââââââââââââââââââ
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+
+// ââ CHECK SESSION ON LOAD ââ
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    currentUser = session.user;
+    await loadProfile();
   } else {
-    msg.innerHTML = '<span style="color:#888">Your application is pending review.</span>';
+    currentUser = null;
+    currentProfile = null;
+  }
+});
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    await loadProfile();
+    routeUser();
+  }
+});
+
+async function loadProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  currentProfile = data;
+}
+
+function routeUser() {
+  if (!currentProfile) return;
+  if (currentProfile.access_level === 'admin') {
+    showView('view-admin');
+    loadAdminData();
+  } else if (['full_member','view_only','contributor'].includes(currentProfile.access_level)) {
+    populateMemberView();
+    showView('view-member');
+  } else {
+    showAlert('login-alert', 'Your application is pending review. You will receive an email once approved.', 'info');
   }
 }
 
-async function showReset() {
-  const email = prompt('Enter your email address for a password reset link:');
-  if (!email) return;
-  const {error} = await sb.auth.resetPasswordForEmail(email, {redirectTo: window.location.href});
-  alert(error ? error.message : 'Reset link sent! Check your email.');
+// ââââââââââââââââââââââââââââââââââââââââââââ
+// AUTH HANDLERS
+// ââââââââââââââââââââââââââââââââââââââââââââ
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!email || !password) return showAlert('login-alert', 'Please enter your email and password.', 'error');
+  setLoading('login-btn', true);
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  setLoading('login-btn', false);
+  if (error) return showAlert('login-alert', error.message, 'error');
+  currentUser = data.user;
+  await loadProfile();
+  logActivity('login', 'auth', null, { email });
+  routeUser();
+}
+
+async function handleAdminLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const password = document.getElementById('admin-password').value;
+  if (!email || !password) return showAlert('admin-login-alert', 'Please enter credentials.', 'error');
+  setLoading('admin-login-btn', true);
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  setLoading('admin-login-btn', false);
+  if (error) return showAlert('admin-login-alert', error.message, 'error');
+  currentUser = data.user;
+  await loadProfile();
+  if (currentProfile?.access_level !== 'admin') {
+    await sb.auth.signOut();
+    return showAlert('admin-login-alert', 'This account does not have administrator access.', 'error');
+  }
+  showView('view-admin');
+  loadAdminData();
+}
+
+async function handleSignOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  currentProfile = null;
+  showView('view-login');
+  showPanel('panel-login');
+}
+
+async function handleApply() {
+  const name = document.getElementById('apply-name').value.trim();
+  const email = document.getElementById('apply-email').value.trim();
+  const location = document.getElementById('apply-location').value.trim();
+  const heritage = document.getElementById('apply-heritage').value.trim();
+  if (!name || !email || !heritage) return showAlert('apply-alert', 'Please fill in all required fields.', 'error');
+  setLoading('apply-btn', true);
+  const { error } = await sb.from('applications').insert({ full_name: name, email, location, heritage_statement: heritage });
+  setLoading('apply-btn', false);
+  if (error) return showAlert('apply-alert', error.message, 'error');
+  showAlert('apply-alert', 'Your application has been submitted. We will review it and contact you by email.', 'success');
+  document.getElementById('apply-name').value = '';
+  document.getElementById('apply-email').value = '';
+  document.getElementById('apply-location').value = '';
+  document.getElementById('apply-heritage').value = '';
+}
+
+async function handleReset() {
+  const email = document.getElementById('reset-email').value.trim();
+  if (!email) return showAlert('reset-alert', 'Please enter your email address.', 'error');
+  setLoading('reset-btn', true);
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href
+  });
+  setLoading('reset-btn', false);
+  if (error) return showAlert('reset-alert', error.message, 'error');
+  showAlert('reset-alert', 'Password reset email sent. Please check your inbox.', 'success');
+}
+
+// ââââââââââââââââââââââââââââââââââââââââââââ
+// MEMBER FUNCTIONS
+// ââââââââââââââââââââââââââââââââââââââââââââ
+function populateMemberView() {
+  if (!currentProfile) return;
+  const name = currentProfile.full_name || currentUser.email.split('@')[0];
+  document.getElementById('member-name').textContent = name;
+  document.getElementById('member-initial').textContent = name[0].toUpperCase();
+  document.getElementById('member-id').textContent = currentProfile.member_id || '';
+  const level = currentProfile.access_level || 'pending';
+  document.getElementById('member-badge').textContent = level.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+  // Populate profile fields
+  document.getElementById('profile-name').value = currentProfile.full_name || '';
+  document.getElementById('profile-generation').value = currentProfile.generation || '';
+  document.getElementById('profile-location').value = currentProfile.location || '';
+  document.getElementById('profile-branch').value = currentProfile.family_branch || '';
+}
+
+async function handleContribute() {
+  const title = document.getElementById('contrib-title').value.trim();
+  const category = document.getElementById('contrib-category').value;
+  const description = document.getElementById('contrib-desc').value.trim();
+  const provenance = document.getElementById('contrib-provenance').value.trim();
+  const era = document.getElementById('contrib-era').value.trim();
+  if (!title) return showAlert('contribute-alert', 'Please enter a title for the item.', 'error');
+  const { error } = await sb.from('contributions').insert({
+    submitted_by: currentUser.id, title, category, description, provenance, era
+  });
+  if (error) return showAlert('contribute-alert', error.message, 'error');
+  showAlert('contribute-alert', 'Thank you! Your contribution has been submitted for review.', 'success');
+  logActivity('contribution_submitted', 'contribution', null, { title, category });
+}
+
+async function handleProfileSave() {
+  const { error } = await sb.from('profiles').update({
+    full_name: document.getElementById('profile-name').value.trim(),
+    generation: document.getElementById('profile-generation').value.trim(),
+    location: document.getElementById('profile-location').value.trim(),
+    family_branch: document.getElementById('profile-branch').value.trim(),
+  }).eq('id', currentUser.id);
+  if (error) return showAlert('profile-alert', error.message, 'error');
+  showAlert('profile-alert', 'Profile updated successfully.', 'success');
+  await loadProfile();
+  populateMemberView();
+}
+
+async function handlePasswordChange() {
+  const pwd = document.getElementById('new-password').value;
+  if (!pwd || pwd.length < 8) return showAlert('profile-alert', 'Password must be at least 8 characters.', 'error');
+  const { error } = await sb.auth.updateUser({ password: pwd });
+  if (error) return showAlert('profile-alert', error.message, 'error');
+  showAlert('profile-alert', 'Password updated successfully.', 'success');
+  document.getElementById('new-password').value = '';
+}
+
+// ââââââââââââââââââââââââââââââââââââââââââââ
+// ADMIN FUNCTIONS
+// ââââââââââââââââââââââââââââââââââââââââââââ
+async function loadAdminData() {
+  await Promise.all([loadDashStats(), loadApplications(), loadMembers(), loadContributions(), loadActivity()]);
+}
+
+async function loadDashStats() {
+  const [members, pending, contribs, total] = await Promise.all([
+    sb.from('profiles').select('id', { count: 'exact' }).in('access_level', ['full_member','view_only','contributor','admin']),
+    sb.from('applications').select('id', { count: 'exact' }).eq('status', 'pending'),
+    sb.from('contributions').select('id', { count: 'exact' }).eq('status', 'pending'),
+    sb.from('profiles').select('id', { count: 'exact' })
+  ]);
+  document.getElementById('dash-members').textContent = members.count ?? 'â';
+  document.getElementById('dash-pending').textContent = pending.count ?? 'â';
+  document.getElementById('dash-contributions').textContent = contribs.count ?? 'â';
+  document.getElementById('dash-total').textContent = total.count ?? 'â';
+  if (pending.count > 0) document.getElementById('pending-badge').textContent = pending.count;
+
+  // Recent apps
+  const { data: apps } = await sb.from('applications').select('*').order('created_at', { ascending: false }).limit(5);
+  renderRecentApps(apps || []);
+}
+
+function renderRecentApps(apps) {
+  const el = document.getElementById('recent-apps-list');
+  if (!apps.length) { el.innerHTML = '<p style="color:var(--grey);font-size:13px;">No applications yet.</p>'; return; }
+  el.innerHTML = `<table class="data-table">
+    <thead><tr><th>Name</th><th>Email</th><th>Location</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>${apps.map(a => `<tr>
+      <td>${a.full_name}</td><td style="color:var(--grey)">${a.email}</td>
+      <td style="color:var(--grey)">${a.location || 'â'}</td>
+      <td style="color:var(--grey)">${new Date(a.created_at).toLocaleDateString()}</td>
+      <td><span class="badge badge-${a.status}">${a.status}</span></td>
+      <td style="display:flex;gap:8px;">
+        ${a.status === 'pending' ? `<button class="btn-sm btn-approve" onclick="approveApp('${a.id}','${a.email}','${a.full_name}')">Approve</button>
+        <button class="btn-sm btn-reject" onclick="rejectApp('${a.id}')">Reject</button>` : 'â'}
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+async function loadApplications() {
+  const { data } = await sb.from('applications').select('*').order('created_at', { ascending: false });
+  const el = document.getElementById('applications-list');
+  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">ð</div><p>No applications yet.</p></div>'; return; }
+  el.innerHTML = `<table class="data-table">
+    <thead><tr><th>Name</th><th>Email</th><th>Location</th><th>Heritage Statement</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${data.map(a => `<tr>
+      <td><strong>${a.full_name}</strong></td>
+      <td style="color:var(--grey)">${a.email}</td>
+      <td style="color:var(--grey)">${a.location || 'â'}</td>
+      <td style="color:var(--grey-light);max-width:200px;font-size:12px;">${(a.heritage_statement||'').substring(0,100)}${a.heritage_statement?.length > 100 ? '...' : ''}</td>
+      <td style="color:var(--grey)">${new Date(a.created_at).toLocaleDateString()}</td>
+      <td><span class="badge badge-${a.status}">${a.status}</span></td>
+      <td style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${a.status === 'pending' ? `<button class="btn-sm btn-approve" onclick="approveApp('${a.id}','${a.email}','${a.full_name}')">Approve</button>
+        <button class="btn-sm btn-reject" onclick="rejectApp('${a.id}')">Reject</button>` : 'â'}
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+async function approveApp(id, email, name) {
+  // Create auth user via admin invite (sends magic link)
+  const tempPwd = 'Preston-' + Math.random().toString(36).substring(2, 10);
+  const { error } = await sb.from('applications').update({
+    status: 'approved', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString(), temp_password: tempPwd
+  }).eq('id', id);
+  if (error) return alert('Error: ' + error.message);
+  await loadAdminData();
+  alert(`Application approved!\n\nNext step: Create an account for ${name} (${email}) via Supabase Auth dashboard, or use the Send Invitation tab to email them a signup link.`);
+}
+
+async function rejectApp(id) {
+  if (!confirm('Reject this application?')) return;
+  await sb.from('applications').update({ status: 'rejected', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() }).eq('id', id);
+  await loadAdminData();
+}
+
+async function loadMembers() {
+  const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
+  const el = document.getElementById('members-list');
+  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">ð¥</div><p>No members yet.</p></div>'; return; }
+  el.innerHTML = `<table class="data-table">
+    <thead><tr><th>Name</th><th>Email</th><th>Member ID</th><th>Access Level</th><th>Joined</th><th>Actions</th></tr></thead>
+    <tbody>${data.map(m => `<tr>
+      <td><strong>${m.full_name || 'â'}</strong></td>
+      <td style="color:var(--grey)">${m.email}</td>
+      <td style="color:var(--grey);font-size:11px;">${m.member_id || 'â'}</td>
+      <td>
+        <select class="select-input" style="font-size:11px;" onchange="updateMemberAccess('${m.id}',this.value)">
+          <option value="pending" ${m.access_level==='pending'?'selected':''}>Pending</option>
+          <option value="view_only" ${m.access_level==='view_only'?'selected':''}>View Only</option>
+          <option value="full_member" ${m.access_level==='full_member'?'selected':''}>Full Member</option>
+          <option value="contributor" ${m.access_level==='contributor'?'selected':''}>Contributor</option>
+          <option value="admin" ${m.access_level==='admin'?'selected':''}>Admin</option>
+        </select>
+      </td>
+      <td style="color:var(--grey)">${new Date(m.created_at).toLocaleDateString()}</td>
+      <td>
+        ${m.id !== currentUser?.id ? `<button class="btn-sm btn-danger" onclick="revokeMember('${m.id}')">Revoke</button>` : '<span style="color:var(--grey);font-size:11px;">You</span>'}
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+async function updateMemberAccess(userId, level) {
+  await sb.from('profiles').update({ access_level: level }).eq('id', userId);
+  logActivity('access_level_changed', 'profile', userId, { new_level: level });
+}
+
+async function revokeMember(userId) {
+  if (!confirm('Revoke this member\'s access?')) return;
+  await sb.from('profiles').update({ access_level: 'pending', status: 'revoked' }).eq('id', userId);
+  loadMembers();
+}
+
+async function loadContributions() {
+  const { data } = await sb.from('contributions').select('*, profiles(full_name, email)').order('created_at', { ascending: false });
+  const el = document.getElementById('contributions-list');
+  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">â</div><p>No contributions yet.</p></div>'; return; }
+  el.innerHTML = `<table class="data-table">
+    <thead><tr><th>Title</th><th>Category</th><th>Submitted By</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${data.map(c => `<tr>
+      <td><strong>${c.title}</strong><br><span style="color:var(--grey);font-size:11px;">${(c.description||'').substring(0,60)}${c.description?.length > 60?'...':''}</span></td>
+      <td style="color:var(--grey)">${c.category.replace('_',' ')}</td>
+      <td style="color:var(--grey)">${c.profiles?.full_name || c.profiles?.email || 'â'}</td>
+      <td style="color:var(--grey)">${new Date(c.created_at).toLocaleDateString()}</td>
+      <td><span class="badge badge-${c.status}">${c.status}</span></td>
+      <td style="display:flex;gap:8px;">
+        ${c.status === 'pending' ? `<button class="btn-sm btn-approve" onclick="approveContrib('${c.id}')">Approve</button>
+        <button class="btn-sm btn-reject" onclick="rejectContrib('${c.id}')">Reject</button>` : 'â'}
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+async function approveContrib(id) {
+  await sb.from('contributions').update({ status: 'approved', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() }).eq('id', id);
+  loadContributions();
+}
+async function rejectContrib(id) {
+  await sb.from('contributions').update({ status: 'rejected', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() }).eq('id', id);
+  loadContributions();
+}
+
+async function handleSendInvite() {
+  const name = document.getElementById('invite-name').value.trim();
+  const email = document.getElementById('invite-email').value.trim();
+  const access = document.getElementById('invite-access').value;
+  const message = document.getElementById('invite-message').value.trim();
+  if (!email) return showAlert('invite-alert', 'Please enter an email address.', 'error');
+  const { error } = await sb.from('invitations').insert({
+    email, full_name: name, invited_by: currentUser.id, access_level: access, message
+  });
+  if (error) return showAlert('invite-alert', error.message, 'error');
+  logActivity('invitation_sent', 'invitation', null, { email, name, access_level: access });
+  showAlert('invite-alert', `Invitation recorded for ${email}. Note: To send the actual email, use Supabase Auth â Invite User, or integrate an email service like Resend.`, 'success');
+}
+
+async function loadActivity() {
+  const { data } = await sb.from('activity_log').select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(50);
+  const el = document.getElementById('activity-list');
+  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">ð</div><p>No activity recorded yet.</p></div>'; return; }
+  el.innerHTML = `<table class="data-table">
+    <thead><tr><th>Action</th><th>User</th><th>Entity</th><th>Time</th></tr></thead>
+    <tbody>${data.map(a => `<tr>
+      <td>${a.action}</td>
+      <td style="color:var(--grey)">${a.profiles?.full_name || a.profiles?.email || 'â'}</td>
+      <td style="color:var(--grey)">${a.entity_type || 'â'}</td>
+      <td style="color:var(--grey)">${new Date(a.created_at).toLocaleString()}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+async function logActivity(action, entityType, entityId, details) {
+  if (!currentUser) return;
+  await sb.from('activity_log').insert({
+    user_id: currentUser.id, action, entity_type: entityType,
+    entity_id: entityId || null, details
+  });
+}
+
+// ââââââââââââââââââââââââââââââââââââââââââââ
+// UI HELPERS
+// ââââââââââââââââââââââââââââââââââââââââââââ
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+function showPanel(id) {
+  ['panel-login','panel-apply','panel-reset','panel-admin-login'].forEach(p => {
+    const el = document.getElementById(p);
+    if (el) el.style.display = p === id ? 'block' : 'none';
+  });
+}
+
+function showMemberSection(id) {
+  ['section-collection','section-contribute','section-profile'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = s === id ? 'block' : 'none';
+  });
+  ['nav-collection','nav-contribute','nav-profile'].forEach(n => {
+    const el = document.getElementById(n);
+    if (el) el.classList.toggle('active', n === 'nav-' + id.replace('section-',''));
+  });
+}
+
+function showAdminSection(id) {
+  ['admin-dashboard','admin-applications','admin-members','admin-contributions','admin-invite','admin-activity'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = s === id ? 'block' : 'none';
+  });
+  ['anav-dashboard','anav-applications','anav-members','anav-contributions','anav-invite','anav-activity'].forEach(n => {
+    const el = document.getElementById(n);
+    if (el) el.classList.toggle('active', n === 'anav-' + id.replace('admin-',''));
+  });
+}
+
+function showAlert(containerId, message, type) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+  setTimeout(() => { if (el) el.innerHTML = ''; }, 8000);
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.textContent = loading ? 'Please wait...' : btn.dataset.label || btn.textContent;
 }
 </script>
 </body>
