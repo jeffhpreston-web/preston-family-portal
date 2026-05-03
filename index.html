@@ -977,7 +977,11 @@ async function handleSendInvite() {
   });
   if (error) return showAlert('invite-alert', error.message, 'error');
   logActivity('invitation_sent', 'invitation', null, { email, name, access_level: access });
-  showAlert('invite-alert', `Invitation recorded for ${email}. Note: To send the actual email, use Supabase Auth â Invite User, or integrate an email service like Resend.`, 'success');
+  emailInvitation(name, email, access, message).catch(() => {});
+  showAlert('invite-alert', `Invitation sent to ${email}.`, 'success');
+  document.getElementById('invite-name').value = '';
+  document.getElementById('invite-email').value = '';
+  document.getElementById('invite-message').value = '';
 }
 
 async function loadActivity() {
@@ -1053,6 +1057,112 @@ function setLoading(btnId, loading) {
   btn.disabled = loading;
   btn.textContent = loading ? 'Please wait...' : btn.dataset.label || btn.textContent;
 }
+
+// ------------------------------------------------------------
+// EMAIL  (Resend via Supabase Edge Function "send-email")
+// ------------------------------------------------------------
+const EMAIL_FROM  = 'Preston Collection <noreply@prestoncollection.net>';
+const EMAIL_ADMIN = 'jeff.h.preston@gmail.com';
+const PORTAL_URL  = window.location.origin + window.location.pathname;
+
+function emailWrap(bodyHtml) {
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#000;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#e8e8e8;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:48px 24px;">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #2a2a2a;">
+  <tr><td style="padding:36px 40px;border-bottom:1px solid #2a2a2a;">
+    <p style="margin:0;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#b8972a;">The Preston Collection</p>
+    <p style="margin:8px 0 0;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#555;">Est. 1865 &middot; Originated c.1625</p>
+  </td></tr>
+  <tr><td style="padding:40px;">${bodyHtml}</td></tr>
+  <tr><td style="padding:24px 40px;border-top:1px solid #2a2a2a;text-align:center;">
+    <p style="margin:0;font-size:10px;color:#555;letter-spacing:0.1em;">This message was sent by the Preston Collection Family Portal.</p>
+  </td></tr>
+</table>
+</td></tr></table></body></html>`;
+}
+
+async function sendEmail(to, subject, bodyHtml) {
+  const { error } = await sb.functions.invoke('send-email', {
+    body: { to, from: EMAIL_FROM, subject, html: emailWrap(bodyHtml) }
+  });
+  if (error) throw error;
+}
+
+async function emailApplicationReceived(name, email) {
+  await sendEmail(
+    email,
+    'Your Preston Collection Access Request',
+    `<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Application Received</h2>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ${name},</p>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Thank you for submitting your request to access the Preston Collection Family Portal. We have received your application and will review it carefully.</p>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;">You will receive a follow-up email once your application has been reviewed.</p>
+    <p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>`
+  );
+}
+
+async function emailApplicationApproved(name, email, memberId) {
+  var memberIdLine = memberId
+    ? '<p style="font-size:13px;color:#888;margin:0 0 16px;">Your Member ID: <strong style="color:#b8972a;letter-spacing:0.1em;">' + memberId + '</strong></p>'
+    : '';
+  await sendEmail(
+    email,
+    'Welcome to the Preston Collection',
+    `<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Access Approved</h2>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ${name},</p>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">We are delighted to inform you that your application for access to the Preston Collection Family Portal has been approved.</p>
+    ${memberIdLine}
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;">You may now <a href="${PORTAL_URL}" style="color:#b8972a;">sign in to the portal</a>. If this is your first visit, use the Forgot Password link to set your password.</p>
+    <p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>`
+  );
+}
+
+async function emailApplicationRejected(name, email) {
+  await sendEmail(
+    email,
+    'Preston Collection - Application Update',
+    `<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Application Update</h2>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ${name},</p>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Thank you for your interest in the Preston Collection Family Portal. After careful review, we are unable to grant access at this time.</p>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;">If you believe this is an error or have additional information to share about your family connection, please reply to this email.</p>
+    <p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>`
+  );
+}
+
+async function emailInvitation(name, email, accessLevel, personalMessage) {
+  var levelLabel = accessLevel.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  var msgBlock = personalMessage
+    ? '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;padding:16px;background:#1a1a1a;border-left:2px solid #b8972a;">' + personalMessage + '</p>'
+    : '';
+  await sendEmail(
+    email,
+    "You've Been Invited to the Preston Collection",
+    `<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Family Portal Invitation</h2>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ${name || 'Family Member'},</p>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">You have been personally invited to join the Preston Collection Family Portal with <strong style="color:#e8e8e8;">${levelLabel}</strong> access.</p>
+    ${msgBlock}
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;"><a href="${PORTAL_URL}" style="display:inline-block;background:#c0392b;color:#fff;padding:12px 28px;text-decoration:none;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;">Access the Portal</a></p>
+    <p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>`
+  );
+}
+
+async function emailAdminNewApplication(name, email, heritage) {
+  await sendEmail(
+    EMAIL_ADMIN,
+    'New Access Application - Preston Collection',
+    `<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">New Application</h2>
+    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 24px;">A new family access application has been received.</p>
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+      <tr><td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#666;width:130px;">Name</td>
+          <td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:14px;color:#e8e8e8;">${name}</td></tr>
+      <tr><td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#666;">Email</td>
+          <td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:14px;color:#e8e8e8;">${email}</td></tr>
+      <tr><td style="padding:10px 0;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#666;vertical-align:top;">Heritage</td>
+          <td style="padding:10px 0;font-size:14px;color:#aaa;line-height:1.7;">${heritage}</td></tr>
+    </table>
+    <p style="font-size:14px;margin:0;"><a href="${PORTAL_URL}" style="color:#b8972a;">Log in to the admin panel</a> to approve or reject this application.</p>`
+  );
+}
+
 </script>
 </body>
 </html>
