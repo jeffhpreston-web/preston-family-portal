@@ -1,13 +1,12 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Preston Collection â Family Access</title>
+<title>Preston Collection &mdash; Family Access</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ââ CONFIG: swap these two lines with your real values ââ */
+  /* -- CONFIG: swap these two lines with your real values -- */
   /* SUPABASE_URL and SUPABASE_ANON_KEY are set in the <script> below */
 
   :root {
@@ -29,7 +28,7 @@
   .view { display:none; min-height:100vh; position:relative; z-index:1; }
   .view.active { display:flex; flex-direction:column; }
 
-  /* ââ HEADER ââ */
+  /* -- HEADER -- */
   header { display:flex; align-items:center; justify-content:space-between;
            padding:28px 48px; border-bottom:1px solid var(--border);
            background:rgba(0,0,0,0.6); backdrop-filter:blur(10px);
@@ -57,7 +56,7 @@
                 text-transform:uppercase; cursor:pointer; transition:background 0.3s; }
   .btn-header:hover { background:var(--red-hover); }
 
-  /* ââ HERO ââ */
+  /* -- HERO -- */
   .hero { flex:1; display:grid; grid-template-columns:1fr 1fr;
           min-height:calc(100vh - 110px); }
   .hero-left { display:flex; flex-direction:column; justify-content:center;
@@ -88,7 +87,7 @@
                transition:all 0.3s; }
   .btn-ghost:hover { border-color:var(--grey-light); color:var(--white); }
 
-  /* ââ LOGIN PANEL ââ */
+  /* -- LOGIN PANEL -- */
   .hero-right { display:flex; flex-direction:column; justify-content:center;
                 padding:80px 48px; background:var(--deep); }
   .panel-label { font-size:9px; letter-spacing:0.3em; text-transform:uppercase;
@@ -133,7 +132,7 @@
   .alert-info { background:rgba(255,255,255,0.05); border:1px solid var(--border);
                 color:var(--grey-light); }
 
-  /* ââ MEMBER PORTAL ââ */
+  /* -- MEMBER PORTAL -- */
   .portal-layout { display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
   .sidebar { background:var(--deep); border-right:1px solid var(--border);
              padding:32px 0; display:flex; flex-direction:column; }
@@ -165,7 +164,7 @@
                 font-weight:300; margin-bottom:8px; }
   .page-sub { color:var(--grey); font-size:13px; }
 
-  /* ââ COLLECTION GRID ââ */
+  /* -- COLLECTION GRID -- */
   .collection-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr));
                      gap:24px; margin-top:32px; }
   .collection-card { background:var(--surface); border:1px solid var(--border);
@@ -180,7 +179,7 @@
                 font-weight:400; margin-bottom:8px; }
   .card-count { font-size:11px; color:var(--grey); letter-spacing:0.1em; }
 
-  /* ââ ADMIN PANEL ââ */
+  /* -- ADMIN PANEL -- */
   .admin-layout { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
   .dash-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:20px;
                 margin-bottom:40px; }
@@ -190,7 +189,7 @@
   .dash-stat-label { font-size:10px; color:var(--grey); letter-spacing:0.15em;
                      text-transform:uppercase; margin-top:4px; }
 
-  /* ââ TABLES ââ */
+  /* -- TABLES -- */
   .data-table { width:100%; border-collapse:collapse; }
   .data-table th { text-align:left; padding:12px 16px; font-size:9px;
                    letter-spacing:0.2em; text-transform:uppercase; color:var(--grey);
@@ -230,9 +229,9 @@
 </head>
 <body>
 
-<!-- ââââââââââââââââââââââââââââââââââââââââââââ
+<!-- ================================================
      VIEW 1: PUBLIC LOGIN
-ââââââââââââââââââââââââââââââââââââââââââââ -->
+================================================ -->
 <div id="view-login" class="view active">
   <header>
     <a class="logo" href="#">
@@ -242,7 +241,7 @@
       </div>
       <div class="logo-text">
         The Preston Collection
-        <small>Est. 1865 Â· Originated c.1625</small>
+        <small>Est. 1865 &middot; Originated c.1625</small>
       </div>
     </a>
     <nav class="nav-right">
@@ -254,7 +253,7 @@
     <div class="hero-left">
       <div class="hero-eyebrow">Private Family Access</div>
       <h1 class="hero-title">Eight Generations<br>of <em>Living</em> History</h1>
-      <p class="hero-body">The Preston Collection is a privately held family archive spanning over 400 years â from manuscripts and fine art to coins, jewelry, and historical memorabilia. This portal grants verified family members exclusive access to the full collection.</p>
+      <p class="hero-body">The Preston Collection is a privately held family archive spanning over 400 years &mdash; from manuscripts and fine art to coins, jewelry, and historical memorabilia. This portal grants verified family members exclusive access to the full collection.</p>
       <div class="stats">
         <div class="stat">
           <div class="stat-num">400+</div>
@@ -271,7 +270,7 @@
       </div>
       <div class="hero-actions">
         <button class="btn-outline" onclick="showPanel('panel-apply')">+ Request Family Access</button>
-        <a href="https://prestoncollection.net" class="btn-ghost" style="display:inline-flex;align-items:center;text-decoration:none;">â Public Site</a>
+        <a href="https://prestoncollection.net" class="btn-ghost" style="display:inline-flex;align-items:center;text-decoration:none;">&larr; Public Site</a>
       </div>
     </div>
 
@@ -288,17 +287,17 @@
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
-          <input type="password" id="login-password" class="form-input" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢">
+          <input type="password" id="login-password" class="form-input" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
         </div>
         <button class="btn-primary" id="login-btn" onclick="handleLogin()">Sign In to Collection</button>
         <div class="form-divider">or</div>
         <div class="form-links">
-          <button class="form-link" onclick="showPanel('panel-apply')">Request Family Access â</button>
+          <button class="form-link" onclick="showPanel('panel-apply')">Request Family Access &rarr;</button>
           <button class="form-link" onclick="showPanel('panel-reset')">Forgot password?</button>
         </div>
         <div class="admin-section">
           <div class="admin-label">Admin</div>
-          <button class="form-link" onclick="showPanel('panel-admin-login')">Administrator Portal â</button>
+          <button class="form-link" onclick="showPanel('panel-admin-login')">Administrator Portal &rarr;</button>
         </div>
       </div>
 
@@ -322,12 +321,12 @@
         </div>
         <div class="form-group">
           <label class="form-label">Your Preston Family Connection</label>
-          <textarea id="apply-heritage" class="form-input form-textarea" placeholder="Describe your connection to the Preston family â your branch, generation, relation to known family members..."></textarea>
+          <textarea id="apply-heritage" class="form-input form-textarea" placeholder="Describe your connection to the Preston family &mdash; your branch, generation, relation to known family members..."></textarea>
         </div>
         <button class="btn-primary" id="apply-btn" onclick="handleApply()">Submit Request</button>
         <div class="form-divider">or</div>
         <div class="form-links">
-          <button class="form-link" onclick="showPanel('panel-login')">â Back to Sign In</button>
+          <button class="form-link" onclick="showPanel('panel-login')">&larr; Back to Sign In</button>
         </div>
       </div>
 
@@ -344,7 +343,7 @@
         <button class="btn-primary" id="reset-btn" onclick="handleReset()">Send Reset Link</button>
         <div class="form-divider">or</div>
         <div class="form-links">
-          <button class="form-link" onclick="showPanel('panel-login')">â Back to Sign In</button>
+          <button class="form-link" onclick="showPanel('panel-login')">&larr; Back to Sign In</button>
         </div>
       </div>
 
@@ -360,21 +359,21 @@
         </div>
         <div class="form-group">
           <label class="form-label">Admin Password</label>
-          <input type="password" id="admin-password" class="form-input" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢">
+          <input type="password" id="admin-password" class="form-input" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
         </div>
         <button class="btn-primary" id="admin-login-btn" onclick="handleAdminLogin()">Access Admin Panel</button>
         <div class="form-divider">or</div>
         <div class="form-links">
-          <button class="form-link" onclick="showPanel('panel-login')">â Back to Sign In</button>
+          <button class="form-link" onclick="showPanel('panel-login')">&larr; Back to Sign In</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ââââââââââââââââââââââââââââââââââââââââââââ
+<!-- ================================================
      VIEW 2: MEMBER PORTAL
-ââââââââââââââââââââââââââââââââââââââââââââ -->
+================================================ -->
 <div id="view-member" class="view">
   <div class="portal-layout">
     <aside class="sidebar">
@@ -386,13 +385,13 @@
       </div>
       <nav class="sidebar-nav">
         <div class="nav-item active" onclick="showMemberSection('section-collection')" id="nav-collection">
-          <span class="nav-icon">â</span> Collection
+          <span class="nav-icon">&#9782;</span> Collection
         </div>
         <div class="nav-item" onclick="showMemberSection('section-contribute')" id="nav-contribute">
-          <span class="nav-icon">â</span> Contribute
+          <span class="nav-icon">+</span> Contribute
         </div>
         <div class="nav-item" onclick="showMemberSection('section-profile')" id="nav-profile">
-          <span class="nav-icon">â</span> My Profile
+          <span class="nav-icon">&#9711;</span> My Profile
         </div>
       </nav>
       <div style="padding:24px; border-top:1px solid var(--border); margin-top:auto;">
@@ -408,14 +407,14 @@
           <p class="page-sub">Browse the complete Preston family archive</p>
         </div>
         <div class="collection-grid">
-          <div class="collection-card"><div class="card-icon">ð</div><div class="card-title">Books & Manuscripts</div><div class="card-count">Rare texts & documents</div></div>
-          <div class="collection-card"><div class="card-icon">ðª</div><div class="card-title">Coins & Currency</div><div class="card-count">Historical coinage</div></div>
-          <div class="collection-card"><div class="card-icon">ð¨</div><div class="card-title">Fine Art & Prints</div><div class="card-count">Paintings & artwork</div></div>
-          <div class="collection-card"><div class="card-icon">â±</div><div class="card-title">Horology</div><div class="card-count">Timepieces & clocks</div></div>
-          <div class="collection-card"><div class="card-icon">ðº</div><div class="card-title">Maps & Lithographs</div><div class="card-count">Historical cartography</div></div>
-          <div class="collection-card"><div class="card-icon">â¾</div><div class="card-title">Sports Cards & Memorabilia</div><div class="card-count">Trading cards & collectibles</div></div>
-          <div class="collection-card"><div class="card-icon">ð</div><div class="card-title">Jewelry</div><div class="card-count">Family heirlooms</div></div>
-          <div class="collection-card"><div class="card-icon">ð</div><div class="card-title">Comics & Magazines</div><div class="card-count">Vintage publications</div></div>
+          <div class="collection-card"><div class="card-icon">&#128214;</div><div class="card-title">Books &amp; Manuscripts</div><div class="card-count">Rare texts &amp; documents</div></div>
+          <div class="collection-card"><div class="card-icon">&#127818;</div><div class="card-title">Coins &amp; Currency</div><div class="card-count">Historical coinage</div></div>
+          <div class="collection-card"><div class="card-icon">&#127912;</div><div class="card-title">Fine Art &amp; Prints</div><div class="card-count">Paintings &amp; artwork</div></div>
+          <div class="collection-card"><div class="card-icon">&#9201;</div><div class="card-title">Horology</div><div class="card-count">Timepieces &amp; clocks</div></div>
+          <div class="collection-card"><div class="card-icon">&#128506;</div><div class="card-title">Maps &amp; Lithographs</div><div class="card-count">Historical cartography</div></div>
+          <div class="collection-card"><div class="card-icon">&#9918;</div><div class="card-title">Sports Cards &amp; Memorabilia</div><div class="card-count">Trading cards &amp; collectibles</div></div>
+          <div class="collection-card"><div class="card-icon">&#128142;</div><div class="card-title">Jewelry</div><div class="card-count">Family heirlooms</div></div>
+          <div class="collection-card"><div class="card-icon">&#128240;</div><div class="card-title">Comics &amp; Magazines</div><div class="card-count">Vintage publications</div></div>
         </div>
       </div>
 
@@ -434,21 +433,21 @@
           <div class="form-group">
             <label class="form-label">Category</label>
             <select id="contrib-category" class="form-input select-input">
-              <option value="books_manuscripts">Books & Manuscripts</option>
-              <option value="coins_currency">Coins & Currency</option>
-              <option value="fine_art">Fine Art & Prints</option>
+              <option value="books_manuscripts">Books &amp; Manuscripts</option>
+              <option value="coins_currency">Coins &amp; Currency</option>
+              <option value="fine_art">Fine Art &amp; Prints</option>
               <option value="horology">Horology</option>
-              <option value="maps_lithographs">Maps & Lithographs</option>
+              <option value="maps_lithographs">Maps &amp; Lithographs</option>
               <option value="sports_cards">Sports Cards</option>
               <option value="sports_memorabilia">Sports Memorabilia</option>
               <option value="jewelry">Jewelry</option>
-              <option value="comics_magazines">Comics & Magazines</option>
+              <option value="comics_magazines">Comics &amp; Magazines</option>
               <option value="other">Other</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">Description</label>
-            <textarea id="contrib-desc" class="form-input form-textarea" placeholder="Describe the item â what it is, its significance..."></textarea>
+            <textarea id="contrib-desc" class="form-input form-textarea" placeholder="Describe the item &mdash; what it is, its significance..."></textarea>
           </div>
           <div class="form-group">
             <label class="form-label">Provenance / History</label>
@@ -456,7 +455,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">Approximate Era</label>
-            <input type="text" id="contrib-era" class="form-input" placeholder="e.g. 1880s, Victorian, Early 20th Century">
+            <input type="contrib-era" id="contrib-era" class="form-input" placeholder="e.g. 1880s, Victorian, Early 20th Century">
           </div>
           <button class="btn-primary" style="max-width:300px;" onclick="handleContribute()">Submit for Review</button>
         </div>
@@ -501,9 +500,9 @@
   </div>
 </div>
 
-<!-- ââââââââââââââââââââââââââââââââââââââââââââ
+<!-- ================================================
      VIEW 3: ADMIN PANEL
-ââââââââââââââââââââââââââââââââââââââââââââ -->
+================================================ -->
 <div id="view-admin" class="view">
   <div class="admin-layout">
     <aside class="sidebar">
@@ -515,23 +514,23 @@
       </div>
       <nav class="sidebar-nav">
         <div class="nav-item active" onclick="showAdminSection('admin-dashboard')" id="anav-dashboard">
-          <span class="nav-icon">â</span> Dashboard
+          <span class="nav-icon">&#9783;</span> Dashboard
         </div>
         <div class="nav-item" onclick="showAdminSection('admin-applications')" id="anav-applications">
-          <span class="nav-icon">ð</span> Applications
+          <span class="nav-icon">&#9776;</span> Applications
           <span id="pending-badge" style="margin-left:auto;background:var(--red);color:white;font-size:9px;padding:2px 6px;border-radius:2px;"></span>
         </div>
         <div class="nav-item" onclick="showAdminSection('admin-members')" id="anav-members">
-          <span class="nav-icon">ð¥</span> Members
+          <span class="nav-icon">&#9786;</span> Members
         </div>
         <div class="nav-item" onclick="showAdminSection('admin-contributions')" id="anav-contributions">
-          <span class="nav-icon">â</span> Contributions
+          <span class="nav-icon">&#8853;</span> Contributions
         </div>
         <div class="nav-item" onclick="showAdminSection('admin-invite')" id="anav-invite">
-          <span class="nav-icon">â</span> Send Invitation
+          <span class="nav-icon">&#9993;</span> Send Invitation
         </div>
         <div class="nav-item" onclick="showAdminSection('admin-activity')" id="anav-activity">
-          <span class="nav-icon">ð</span> Activity Log
+          <span class="nav-icon">&#9203;</span> Activity Log
         </div>
       </nav>
       <div style="padding:24px; border-top:1px solid var(--border); margin-top:auto;">
@@ -545,13 +544,13 @@
       <div id="admin-dashboard">
         <div class="page-header">
           <h1 class="page-title">Dashboard</h1>
-          <p class="page-sub">Preston Collection Family Portal â Administration</p>
+          <p class="page-sub">Preston Collection Family Portal &mdash; Administration</p>
         </div>
         <div class="dash-stats">
-          <div class="dash-stat"><div class="dash-stat-num" id="dash-members">â</div><div class="dash-stat-label">Active Members</div></div>
-          <div class="dash-stat"><div class="dash-stat-num" id="dash-pending">â</div><div class="dash-stat-label">Pending Applications</div></div>
-          <div class="dash-stat"><div class="dash-stat-num" id="dash-contributions">â</div><div class="dash-stat-label">Pending Contributions</div></div>
-          <div class="dash-stat"><div class="dash-stat-num" id="dash-total">â</div><div class="dash-stat-label">Total Members</div></div>
+          <div class="dash-stat"><div class="dash-stat-num" id="dash-members">&mdash;</div><div class="dash-stat-label">Active Members</div></div>
+          <div class="dash-stat"><div class="dash-stat-num" id="dash-pending">&mdash;</div><div class="dash-stat-label">Pending Applications</div></div>
+          <div class="dash-stat"><div class="dash-stat-num" id="dash-contributions">&mdash;</div><div class="dash-stat-label">Pending Contributions</div></div>
+          <div class="dash-stat"><div class="dash-stat-num" id="dash-total">&mdash;</div><div class="dash-stat-label">Total Members</div></div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);padding:28px;">
           <div class="section-header"><h3 style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;">Recent Applications</h3></div>
@@ -622,15 +621,15 @@
 </div>
 
 <script>
-// ââââââââââââââââââââââââââââââââââââââââââââ
-// CONFIGURATION â replace with your values
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
+// CONFIGURATION - replace with your values
+// ================================================
 const SUPABASE_URL = 'https://witvlkcjvzxxajdwzdep.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpdHZsa2Nqdnp4eGFqZHd6ZGVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NTk0MDIsImV4cCI6MjA4OTAzNTQwMn0.miKL5P-oTz4r1eTE4mCVdr9nbPv43aAzQQ2fREG1PVc';
 
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
 // INIT SUPABASE
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -645,7 +644,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 let currentUser = null;
 let currentProfile = null;
 
-// ââ CHECK SESSION ON LOAD ââ
+// -- CHECK SESSION ON LOAD --
 sb.auth.onAuthStateChange(async (event, session) => {
   if (session?.user) {
     currentUser = session.user;
@@ -683,9 +682,9 @@ function routeUser() {
   }
 }
 
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
 // AUTH HANDLERS
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
 
 async function handleLogin() {
   const email = document.getElementById('login-email').value.trim();
@@ -758,9 +757,9 @@ async function handleReset() {
   showAlert('reset-alert', 'Password reset email sent. Please check your inbox.', 'success');
 }
 
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
 // MEMBER FUNCTIONS
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
 function populateMemberView() {
   if (!currentProfile) return;
   const name = currentProfile.full_name || currentUser.email.split('@')[0];
@@ -814,9 +813,9 @@ async function handlePasswordChange() {
   document.getElementById('new-password').value = '';
 }
 
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
 // ADMIN FUNCTIONS
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
 async function loadAdminData() {
   await Promise.all([loadDashStats(), loadApplications(), loadMembers(), loadContributions(), loadActivity()]);
 }
@@ -828,10 +827,10 @@ async function loadDashStats() {
     sb.from('contributions').select('id', { count: 'exact' }).eq('status', 'pending'),
     sb.from('profiles').select('id', { count: 'exact' })
   ]);
-  document.getElementById('dash-members').textContent = members.count ?? 'â';
-  document.getElementById('dash-pending').textContent = pending.count ?? 'â';
-  document.getElementById('dash-contributions').textContent = contribs.count ?? 'â';
-  document.getElementById('dash-total').textContent = total.count ?? 'â';
+  document.getElementById('dash-members').textContent = members.count ?? '--';
+  document.getElementById('dash-pending').textContent = pending.count ?? '--';
+  document.getElementById('dash-contributions').textContent = contribs.count ?? '--';
+  document.getElementById('dash-total').textContent = total.count ?? '--';
   if (pending.count > 0) document.getElementById('pending-badge').textContent = pending.count;
 
   // Recent apps
@@ -842,88 +841,89 @@ async function loadDashStats() {
 function renderRecentApps(apps) {
   const el = document.getElementById('recent-apps-list');
   if (!apps.length) { el.innerHTML = '<p style="color:var(--grey);font-size:13px;">No applications yet.</p>'; return; }
-  el.innerHTML = `<table class="data-table">
-    <thead><tr><th>Name</th><th>Email</th><th>Location</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${apps.map(a => `<tr>
-      <td>${a.full_name}</td><td style="color:var(--grey)">${a.email}</td>
-      <td style="color:var(--grey)">${a.location || 'â'}</td>
-      <td style="color:var(--grey)">${new Date(a.created_at).toLocaleDateString()}</td>
-      <td><span class="badge badge-${a.status}">${a.status}</span></td>
-      <td style="display:flex;gap:8px;">
-        ${a.status === 'pending' ? `<button class="btn-sm btn-approve" onclick="approveApp('${a.id}','${a.email}','${a.full_name}')">Approve</button>
-        <button class="btn-sm btn-reject" onclick="rejectApp('${a.id}')">Reject</button>` : 'â'}
-      </td>
-    </tr>`).join('')}</tbody>
-  </table>`;
+  el.innerHTML = '<table class="data-table">' +
+    '<thead><tr><th>Name</th><th>Email</th><th>Location</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>' +
+    '<tbody>' + apps.map(function(a) { return '<tr>' +
+      '<td>' + a.full_name + '</td><td style="color:var(--grey)">' + a.email + '</td>' +
+      '<td style="color:var(--grey)">' + (a.location || '--') + '</td>' +
+      '<td style="color:var(--grey)">' + new Date(a.created_at).toLocaleDateString() + '</td>' +
+      '<td><span class="badge badge-' + a.status + '">' + a.status + '</span></td>' +
+      '<td style="display:flex;gap:8px;">' +
+        (a.status === 'pending'
+          ? '<button class="btn-sm btn-approve" onclick="approveApp(\'' + a.id + '\',\'' + a.email + '\',\'' + a.full_name + '\')">Approve</button>' +
+            '<button class="btn-sm btn-reject" onclick="rejectApp(\'' + a.id + '\')">Reject</button>'
+          : '--') +
+      '</td>' +
+    '</tr>'; }).join('') +
+    '</tbody></table>';
 }
 
 async function loadApplications() {
   const { data } = await sb.from('applications').select('*').order('created_at', { ascending: false });
   const el = document.getElementById('applications-list');
-  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">ð</div><p>No applications yet.</p></div>'; return; }
-  el.innerHTML = `<table class="data-table">
-    <thead><tr><th>Name</th><th>Email</th><th>Location</th><th>Heritage Statement</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
-    <tbody>${data.map(a => `<tr>
-      <td><strong>${a.full_name}</strong></td>
-      <td style="color:var(--grey)">${a.email}</td>
-      <td style="color:var(--grey)">${a.location || 'â'}</td>
-      <td style="color:var(--grey-light);max-width:200px;font-size:12px;">${(a.heritage_statement||'').substring(0,100)}${a.heritage_statement?.length > 100 ? '...' : ''}</td>
-      <td style="color:var(--grey)">${new Date(a.created_at).toLocaleDateString()}</td>
-      <td><span class="badge badge-${a.status}">${a.status}</span></td>
-      <td style="display:flex;gap:8px;flex-wrap:wrap;">
-        ${a.status === 'pending' ? `<button class="btn-sm btn-approve" onclick="approveApp('${a.id}','${a.email}','${a.full_name}')">Approve</button>
-        <button class="btn-sm btn-reject" onclick="rejectApp('${a.id}')">Reject</button>` : 'â'}
-      </td>
-    </tr>`).join('')}</tbody>
-  </table>`;
+  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9776;</div><p>No applications yet.</p></div>'; return; }
+  el.innerHTML = '<table class="data-table">' +
+    '<thead><tr><th>Name</th><th>Email</th><th>Location</th><th>Heritage Statement</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>' +
+    '<tbody>' + data.map(function(a) { return '<tr>' +
+      '<td><strong>' + a.full_name + '</strong></td>' +
+      '<td style="color:var(--grey)">' + a.email + '</td>' +
+      '<td style="color:var(--grey)">' + (a.location || '--') + '</td>' +
+      '<td style="color:var(--grey-light);max-width:200px;font-size:12px;">' + (a.heritage_statement||'').substring(0,100) + (a.heritage_statement?.length > 100 ? '...' : '') + '</td>' +
+      '<td style="color:var(--grey)">' + new Date(a.created_at).toLocaleDateString() + '</td>' +
+      '<td><span class="badge badge-' + a.status + '">' + a.status + '</span></td>' +
+      '<td style="display:flex;gap:8px;flex-wrap:wrap;">' +
+        (a.status === 'pending'
+          ? '<button class="btn-sm btn-approve" onclick="approveApp(\'' + a.id + '\',\'' + a.email + '\',\'' + a.full_name + '\')">Approve</button>' +
+            '<button class="btn-sm btn-reject" onclick="rejectApp(\'' + a.id + '\')">Reject</button>'
+          : '--') +
+      '</td>' +
+    '</tr>'; }).join('') +
+    '</tbody></table>';
 }
 
 async function approveApp(id, email, name) {
-  // Create auth user via admin invite (sends magic link)
-  const tempPwd = 'Preston-' + Math.random().toString(36).substring(2, 10);
+  var tempPwd = 'Preston-' + Math.random().toString(36).substring(2, 10);
   const { error } = await sb.from('applications').update({
     status: 'approved', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString(), temp_password: tempPwd
   }).eq('id', id);
   if (error) return alert('Error: ' + error.message);
   await loadAdminData();
-  const {data:_ap}=await sb.from('profiles').select('member_id').eq('email',email).single();
-  emailApplicationApproved(name,email,_ap?.member_id).catch(()=>{});
-  alert('Approved! A welcome email has been sent to '+email);
+  var res = await sb.from('profiles').select('member_id').eq('email', email).single();
+  emailApplicationApproved(name, email, res.data?.member_id).catch(()=>{});
+  alert('Approved! A welcome email has been sent to ' + email);
 }
 
 async function rejectApp(id) {
   if (!confirm('Reject this application?')) return;
-  const {data:_ra} = await sb.from('applications').select('full_name,email').eq('id',id).single();
+  var res = await sb.from('applications').select('full_name,email').eq('id', id).single();
   await sb.from('applications').update({ status: 'rejected', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() }).eq('id', id);
-  if (_ra) emailApplicationRejected(_ra.full_name, _ra.email).catch(()=>{});
+  if (res.data) emailApplicationRejected(res.data.full_name, res.data.email).catch(()=>{});
   await loadAdminData();
 }
 
 async function loadMembers() {
   const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
   const el = document.getElementById('members-list');
-  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">ð¥</div><p>No members yet.</p></div>'; return; }
-  el.innerHTML = `<table class="data-table">
-    <thead><tr><th>Name</th><th>Email</th><th>Member ID</th><th>Access Level</th><th>Joined</th><th>Actions</th></tr></thead>
-    <tbody>${data.map(m => `<tr>
-      <td><strong>${m.full_name || 'â'}</strong></td>
-      <td style="color:var(--grey)">${m.email}</td>
-      <td style="color:var(--grey);font-size:11px;">${m.member_id || 'â'}</td>
-      <td>
-        <select class="select-input" style="font-size:11px;" onchange="updateMemberAccess('${m.id}',this.value)">
-          <option value="pending" ${m.access_level==='pending'?'selected':''}>Pending</option>
-          <option value="view_only" ${m.access_level==='view_only'?'selected':''}>View Only</option>
-          <option value="full_member" ${m.access_level==='full_member'?'selected':''}>Full Member</option>
-          <option value="contributor" ${m.access_level==='contributor'?'selected':''}>Contributor</option>
-          <option value="admin" ${m.access_level==='admin'?'selected':''}>Admin</option>
-        </select>
-      </td>
-      <td style="color:var(--grey)">${new Date(m.created_at).toLocaleDateString()}</td>
-      <td>
-        ${m.id !== currentUser?.id ? `<button class="btn-sm btn-danger" onclick="revokeMember('${m.id}')">Revoke</button>` : '<span style="color:var(--grey);font-size:11px;">You</span>'}
-      </td>
-    </tr>`).join('')}</tbody>
-  </table>`;
+  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9786;</div><p>No members yet.</p></div>'; return; }
+  el.innerHTML = '<table class="data-table">' +
+    '<thead><tr><th>Name</th><th>Email</th><th>Member ID</th><th>Access Level</th><th>Joined</th><th>Actions</th></tr></thead>' +
+    '<tbody>' + data.map(function(m) { return '<tr>' +
+      '<td><strong>' + (m.full_name || '--') + '</strong></td>' +
+      '<td style="color:var(--grey)">' + m.email + '</td>' +
+      '<td style="color:var(--grey);font-size:11px;">' + (m.member_id || '--') + '</td>' +
+      '<td><select class="select-input" style="font-size:11px;" onchange="updateMemberAccess(\'' + m.id + '\',this.value)">' +
+        '<option value="pending"' + (m.access_level==='pending'?' selected':'') + '>Pending</option>' +
+        '<option value="view_only"' + (m.access_level==='view_only'?' selected':'') + '>View Only</option>' +
+        '<option value="full_member"' + (m.access_level==='full_member'?' selected':'') + '>Full Member</option>' +
+        '<option value="contributor"' + (m.access_level==='contributor'?' selected':'') + '>Contributor</option>' +
+        '<option value="admin"' + (m.access_level==='admin'?' selected':'') + '>Admin</option>' +
+      '</select></td>' +
+      '<td style="color:var(--grey)">' + new Date(m.created_at).toLocaleDateString() + '</td>' +
+      '<td>' + (m.id !== currentUser?.id
+        ? '<button class="btn-sm btn-danger" onclick="revokeMember(\'' + m.id + '\')">Revoke</button>'
+        : '<span style="color:var(--grey);font-size:11px;">You</span>') + '</td>' +
+    '</tr>'; }).join('') +
+    '</tbody></table>';
 }
 
 async function updateMemberAccess(userId, level) {
@@ -932,7 +932,7 @@ async function updateMemberAccess(userId, level) {
 }
 
 async function revokeMember(userId) {
-  if (!confirm('Revoke this member\'s access?')) return;
+  if (!confirm("Revoke this member's access?")) return;
   await sb.from('profiles').update({ access_level: 'pending', status: 'revoked' }).eq('id', userId);
   loadMembers();
 }
@@ -940,21 +940,23 @@ async function revokeMember(userId) {
 async function loadContributions() {
   const { data } = await sb.from('contributions').select('*, profiles(full_name, email)').order('created_at', { ascending: false });
   const el = document.getElementById('contributions-list');
-  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">â</div><p>No contributions yet.</p></div>'; return; }
-  el.innerHTML = `<table class="data-table">
-    <thead><tr><th>Title</th><th>Category</th><th>Submitted By</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
-    <tbody>${data.map(c => `<tr>
-      <td><strong>${c.title}</strong><br><span style="color:var(--grey);font-size:11px;">${(c.description||'').substring(0,60)}${c.description?.length > 60?'...':''}</span></td>
-      <td style="color:var(--grey)">${c.category.replace('_',' ')}</td>
-      <td style="color:var(--grey)">${c.profiles?.full_name || c.profiles?.email || 'â'}</td>
-      <td style="color:var(--grey)">${new Date(c.created_at).toLocaleDateString()}</td>
-      <td><span class="badge badge-${c.status}">${c.status}</span></td>
-      <td style="display:flex;gap:8px;">
-        ${c.status === 'pending' ? `<button class="btn-sm btn-approve" onclick="approveContrib('${c.id}')">Approve</button>
-        <button class="btn-sm btn-reject" onclick="rejectContrib('${c.id}')">Reject</button>` : 'â'}
-      </td>
-    </tr>`).join('')}</tbody>
-  </table>`;
+  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#8853;</div><p>No contributions yet.</p></div>'; return; }
+  el.innerHTML = '<table class="data-table">' +
+    '<thead><tr><th>Title</th><th>Category</th><th>Submitted By</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>' +
+    '<tbody>' + data.map(function(c) { return '<tr>' +
+      '<td><strong>' + c.title + '</strong><br><span style="color:var(--grey);font-size:11px;">' + (c.description||'').substring(0,60) + (c.description?.length > 60 ? '...' : '') + '</span></td>' +
+      '<td style="color:var(--grey)">' + c.category.replace('_',' ') + '</td>' +
+      '<td style="color:var(--grey)">' + (c.profiles?.full_name || c.profiles?.email || '--') + '</td>' +
+      '<td style="color:var(--grey)">' + new Date(c.created_at).toLocaleDateString() + '</td>' +
+      '<td><span class="badge badge-' + c.status + '">' + c.status + '</span></td>' +
+      '<td style="display:flex;gap:8px;">' +
+        (c.status === 'pending'
+          ? '<button class="btn-sm btn-approve" onclick="approveContrib(\'' + c.id + '\')">Approve</button>' +
+            '<button class="btn-sm btn-reject" onclick="rejectContrib(\'' + c.id + '\')">Reject</button>'
+          : '--') +
+      '</td>' +
+    '</tr>'; }).join('') +
+    '</tbody></table>';
 }
 
 async function approveContrib(id) {
@@ -978,7 +980,7 @@ async function handleSendInvite() {
   if (error) return showAlert('invite-alert', error.message, 'error');
   logActivity('invitation_sent', 'invitation', null, { email, name, access_level: access });
   emailInvitation(name, email, access, message).catch(() => {});
-  showAlert('invite-alert', `Invitation sent to ${email}.`, 'success');
+  showAlert('invite-alert', 'Invitation sent to ' + email + '.', 'success');
   document.getElementById('invite-name').value = '';
   document.getElementById('invite-email').value = '';
   document.getElementById('invite-message').value = '';
@@ -987,16 +989,16 @@ async function handleSendInvite() {
 async function loadActivity() {
   const { data } = await sb.from('activity_log').select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(50);
   const el = document.getElementById('activity-list');
-  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">ð</div><p>No activity recorded yet.</p></div>'; return; }
-  el.innerHTML = `<table class="data-table">
-    <thead><tr><th>Action</th><th>User</th><th>Entity</th><th>Time</th></tr></thead>
-    <tbody>${data.map(a => `<tr>
-      <td>${a.action}</td>
-      <td style="color:var(--grey)">${a.profiles?.full_name || a.profiles?.email || 'â'}</td>
-      <td style="color:var(--grey)">${a.entity_type || 'â'}</td>
-      <td style="color:var(--grey)">${new Date(a.created_at).toLocaleString()}</td>
-    </tr>`).join('')}</tbody>
-  </table>`;
+  if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9203;</div><p>No activity recorded yet.</p></div>'; return; }
+  el.innerHTML = '<table class="data-table">' +
+    '<thead><tr><th>Action</th><th>User</th><th>Entity</th><th>Time</th></tr></thead>' +
+    '<tbody>' + data.map(function(a) { return '<tr>' +
+      '<td>' + a.action + '</td>' +
+      '<td style="color:var(--grey)">' + (a.profiles?.full_name || a.profiles?.email || '--') + '</td>' +
+      '<td style="color:var(--grey)">' + (a.entity_type || '--') + '</td>' +
+      '<td style="color:var(--grey)">' + new Date(a.created_at).toLocaleString() + '</td>' +
+    '</tr>'; }).join('') +
+    '</tbody></table>';
 }
 
 async function logActivity(action, entityType, entityId, details) {
@@ -1007,9 +1009,9 @@ async function logActivity(action, entityType, entityId, details) {
   });
 }
 
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
 // UI HELPERS
-// ââââââââââââââââââââââââââââââââââââââââââââ
+// ================================================
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
@@ -1047,7 +1049,7 @@ function showAdminSection(id) {
 function showAlert(containerId, message, type) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+  el.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
   setTimeout(() => { if (el) el.innerHTML = ''; }, 8000);
 }
 
@@ -1058,27 +1060,25 @@ function setLoading(btnId, loading) {
   btn.textContent = loading ? 'Please wait...' : btn.dataset.label || btn.textContent;
 }
 
-// ------------------------------------------------------------
-// EMAIL  (Resend via Supabase Edge Function "send-email")
-// ------------------------------------------------------------
+// ================================================
+// EMAIL (Resend via Supabase Edge Function "send-email")
+// ================================================
 const EMAIL_FROM  = 'Preston Collection <noreply@prestoncollection.net>';
 const EMAIL_ADMIN = 'jeff.h.preston@gmail.com';
 const PORTAL_URL  = window.location.origin + window.location.pathname;
 
 function emailWrap(bodyHtml) {
-  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#000;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#e8e8e8;">
-<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:48px 24px;">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #2a2a2a;">
-  <tr><td style="padding:36px 40px;border-bottom:1px solid #2a2a2a;">
-    <p style="margin:0;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#b8972a;">The Preston Collection</p>
-    <p style="margin:8px 0 0;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#555;">Est. 1865 &middot; Originated c.1625</p>
-  </td></tr>
-  <tr><td style="padding:40px;">${bodyHtml}</td></tr>
-  <tr><td style="padding:24px 40px;border-top:1px solid #2a2a2a;text-align:center;">
-    <p style="margin:0;font-size:10px;color:#555;letter-spacing:0.1em;">This message was sent by the Preston Collection Family Portal.</p>
-  </td></tr>
-</table>
-</td></tr></table></body></html>`;
+  return '<!DOCTYPE html><html><body style="margin:0;padding:0;background:#000;font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;color:#e8e8e8;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:48px 24px;">' +
+    '<table width="560" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #2a2a2a;">' +
+    '<tr><td style="padding:36px 40px;border-bottom:1px solid #2a2a2a;">' +
+    '<p style="margin:0;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#b8972a;">The Preston Collection</p>' +
+    '<p style="margin:8px 0 0;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#555;">Est. 1865 &middot; Originated c.1625</p>' +
+    '</td></tr>' +
+    '<tr><td style="padding:40px;">' + bodyHtml + '</td></tr>' +
+    '<tr><td style="padding:24px 40px;border-top:1px solid #2a2a2a;text-align:center;">' +
+    '<p style="margin:0;font-size:10px;color:#555;letter-spacing:0.1em;">This message was sent by the Preston Collection Family Portal.</p>' +
+    '</td></tr></table></td></tr></table></body></html>';
 }
 
 async function sendEmail(to, subject, bodyHtml) {
@@ -1092,11 +1092,11 @@ async function emailApplicationReceived(name, email) {
   await sendEmail(
     email,
     'Your Preston Collection Access Request',
-    `<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Application Received</h2>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ${name},</p>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Thank you for submitting your request to access the Preston Collection Family Portal. We have received your application and will review it carefully.</p>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;">You will receive a follow-up email once your application has been reviewed.</p>
-    <p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>`
+    '<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Application Received</h2>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ' + name + ',</p>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Thank you for submitting your request to access the Preston Collection Family Portal. We have received your application and will review it carefully.</p>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;">You will receive a follow-up email once your application has been reviewed.</p>' +
+    '<p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>'
   );
 }
 
@@ -1107,12 +1107,12 @@ async function emailApplicationApproved(name, email, memberId) {
   await sendEmail(
     email,
     'Welcome to the Preston Collection',
-    `<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Access Approved</h2>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ${name},</p>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">We are delighted to inform you that your application for access to the Preston Collection Family Portal has been approved.</p>
-    ${memberIdLine}
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;">You may now <a href="${PORTAL_URL}" style="color:#b8972a;">sign in to the portal</a>. If this is your first visit, use the Forgot Password link to set your password.</p>
-    <p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>`
+    '<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Access Approved</h2>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ' + name + ',</p>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">We are delighted to inform you that your application for access to the Preston Collection Family Portal has been approved.</p>' +
+    memberIdLine +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;">You may now <a href="' + PORTAL_URL + '" style="color:#b8972a;">sign in to the portal</a>. If this is your first visit, use the Forgot Password link to set your password.</p>' +
+    '<p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>'
   );
 }
 
@@ -1120,28 +1120,28 @@ async function emailApplicationRejected(name, email) {
   await sendEmail(
     email,
     'Preston Collection - Application Update',
-    `<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Application Update</h2>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ${name},</p>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Thank you for your interest in the Preston Collection Family Portal. After careful review, we are unable to grant access at this time.</p>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;">If you believe this is an error or have additional information to share about your family connection, please reply to this email.</p>
-    <p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>`
+    '<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Application Update</h2>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ' + name + ',</p>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Thank you for your interest in the Preston Collection Family Portal. After careful review, we are unable to grant access at this time.</p>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;">If you believe this is an error or have additional information to share about your family connection, please reply to this email.</p>' +
+    '<p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>'
   );
 }
 
 async function emailInvitation(name, email, accessLevel, personalMessage) {
-  var levelLabel = accessLevel.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  var levelLabel = accessLevel.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
   var msgBlock = personalMessage
     ? '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;padding:16px;background:#1a1a1a;border-left:2px solid #b8972a;">' + personalMessage + '</p>'
     : '';
   await sendEmail(
     email,
     "You've Been Invited to the Preston Collection",
-    `<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Family Portal Invitation</h2>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ${name || 'Family Member'},</p>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">You have been personally invited to join the Preston Collection Family Portal with <strong style="color:#e8e8e8;">${levelLabel}</strong> access.</p>
-    ${msgBlock}
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;"><a href="${PORTAL_URL}" style="display:inline-block;background:#c0392b;color:#fff;padding:12px 28px;text-decoration:none;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;">Access the Portal</a></p>
-    <p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>`
+    '<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">Family Portal Invitation</h2>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">Dear ' + (name || 'Family Member') + ',</p>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 16px;">You have been personally invited to join the Preston Collection Family Portal with <strong style="color:#e8e8e8;">' + levelLabel + '</strong> access.</p>' +
+    msgBlock +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 32px;"><a href="' + PORTAL_URL + '" style="display:inline-block;background:#c0392b;color:#fff;padding:12px 28px;text-decoration:none;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;">Access the Portal</a></p>' +
+    '<p style="font-size:13px;color:#666;margin:0;">Warm regards,<br>The Preston Collection</p>'
   );
 }
 
@@ -1149,20 +1149,19 @@ async function emailAdminNewApplication(name, email, heritage) {
   await sendEmail(
     EMAIL_ADMIN,
     'New Access Application - Preston Collection',
-    `<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">New Application</h2>
-    <p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 24px;">A new family access application has been received.</p>
-    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
-      <tr><td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#666;width:130px;">Name</td>
-          <td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:14px;color:#e8e8e8;">${name}</td></tr>
-      <tr><td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#666;">Email</td>
-          <td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:14px;color:#e8e8e8;">${email}</td></tr>
-      <tr><td style="padding:10px 0;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#666;vertical-align:top;">Heritage</td>
-          <td style="padding:10px 0;font-size:14px;color:#aaa;line-height:1.7;">${heritage}</td></tr>
-    </table>
-    <p style="font-size:14px;margin:0;"><a href="${PORTAL_URL}" style="color:#b8972a;">Log in to the admin panel</a> to approve or reject this application.</p>`
+    '<h2 style="font-family:Georgia,serif;font-size:26px;font-weight:300;color:#fff;margin:0 0 24px;">New Application</h2>' +
+    '<p style="font-size:14px;line-height:1.8;color:#aaa;margin:0 0 24px;">A new family access application has been received.</p>' +
+    '<table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">' +
+    '<tr><td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#666;width:130px;">Name</td>' +
+        '<td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:14px;color:#e8e8e8;">' + name + '</td></tr>' +
+    '<tr><td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#666;">Email</td>' +
+        '<td style="padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:14px;color:#e8e8e8;">' + email + '</td></tr>' +
+    '<tr><td style="padding:10px 0;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#666;vertical-align:top;">Heritage</td>' +
+        '<td style="padding:10px 0;font-size:14px;color:#aaa;line-height:1.7;">' + heritage + '</td></tr>' +
+    '</table>' +
+    '<p style="font-size:14px;margin:0;"><a href="' + PORTAL_URL + '" style="color:#b8972a;">Log in to the admin panel</a> to approve or reject this application.</p>'
   );
 }
-
 </script>
 </body>
 </html>
