@@ -1058,8 +1058,9 @@ async function handleCreateMember() {
 
     btn.disabled = false;
     btn.textContent = btn.dataset.label;
+    navigator.clipboard.writeText(tempPassword).catch(() => {});
     showAlert('create-member-alert',
-      'Account created for ' + firstName + ' ' + lastName + '! Temporary password: ' + tempPassword + ' — share this with them and ask them to change it after first login.',
+      'Account created for ' + firstName + ' ' + lastName + '! Temporary password: ' + tempPassword + ' — share this with them and ask them to change it after first login. (copied to clipboard!)',
       'success'
     );
     document.getElementById('create-first-name').value = '';
@@ -1139,7 +1140,7 @@ function showAlert(containerId, message, type) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
-  setTimeout(() => { if (el) el.innerHTML = ''; }, 8000);
+  if (containerId !== 'create-member-alert') setTimeout(() => { if (el) el.innerHTML = ''; }, 8000);
 }
 
 function setLoading(btnId, loading) {
