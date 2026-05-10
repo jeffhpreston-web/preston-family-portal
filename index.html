@@ -1044,32 +1044,17 @@ async function handleCreateMember() {
   btn.textContent = 'Please wait...';
 
   try {
-    const signUpResp = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        password: tempPassword,
-        data: { first_name: firstName, last_name: lastName, relationship: relationship }
-      })
+    const { data: rpcData, error: rpcError } = await sb.rpc('admin_create_user', {
+      p_email: email,
+      p_password: tempPassword,
+      p_first_name: firstName,
+      p_last_name: lastName,
+      p_family_branch: relationship,
+      p_access_level: accessLevel
     });
-    const signUpJson = await signUpResp.json();
-    if (!signUpResp.ok) throw new Error('Signup API error: ' + JSON.stringify(signUpJson));
-    var userId = signUpJson.id;
-    if (!userId) throw new Error('User creation failed — no user ID returned.');
-
-    var { error: profileError } = await sb.from('profiles').upsert({
-      id: userId,
-      email: email,
-      full_name: firstName + ' ' + lastName,
-      first_name: firstName,
-      last_name: lastName,
-      family_branch: relationship,
-      access_level: accessLevel,
-      status: 'active',
-      joined_at: new Date().toISOString()
-    });
-    if (profileError) throw new Error('Profile upsert error: ' + profileError.message + ' | code: ' + profileError.code);
+    if (rpcError) throw new Error('Failed to create user: ' + rpcError.message);
+    var userId = rpcData;
+    if (!userId) throw new Error('User creation failed — no ID returned.');
 
     btn.disabled = false;
     btn.textContent = btn.dataset.label;
