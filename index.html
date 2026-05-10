@@ -1054,7 +1054,7 @@ async function handleCreateMember() {
       })
     });
     const signUpJson = await signUpResp.json();
-    if (!signUpResp.ok) throw new Error(signUpJson.error_description || signUpJson.msg || 'Signup failed');
+    if (!signUpResp.ok) throw new Error('Signup API error: ' + JSON.stringify(signUpJson));
     var userId = signUpJson.id;
     if (!userId) throw new Error('User creation failed — no user ID returned.');
 
@@ -1069,7 +1069,7 @@ async function handleCreateMember() {
       status: 'active',
       joined_at: new Date().toISOString()
     });
-    if (profileError) throw profileError;
+    if (profileError) throw new Error('Profile upsert error: ' + profileError.message + ' | code: ' + profileError.code);
 
     btn.disabled = false;
     btn.textContent = btn.dataset.label;
