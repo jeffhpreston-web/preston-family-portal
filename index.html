@@ -1060,13 +1060,14 @@ async function handleCreateMember() {
 
     var { error: profileError } = await sb.from('profiles').upsert({
       id: userId,
+      email: email,
+      full_name: firstName + ' ' + lastName,
       first_name: firstName,
       last_name: lastName,
-      full_name: firstName + ' ' + lastName,
-      email: email,
-      relationship: relationship,
+      family_branch: relationship,
       access_level: accessLevel,
-      status: 'active'
+      status: 'active',
+      joined_at: new Date().toISOString()
     });
     if (profileError) throw profileError;
 
