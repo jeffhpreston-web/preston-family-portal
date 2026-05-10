@@ -529,6 +529,9 @@
         <div class="nav-item" onclick="showAdminSection('admin-invite')" id="anav-invite">
           <span class="nav-icon">&#9993;</span> Send Invitation
         </div>
+        <div class="nav-item" onclick="showAdminSection('admin-create-member')" id="anav-create-member">
+          <span class="nav-icon">&#43;</span> Create Member
+        </div>
         <div class="nav-item" onclick="showAdminSection('admin-activity')" id="anav-activity">
           <span class="nav-icon">&#9203;</span> Activity Log
         </div>
@@ -604,6 +607,30 @@
           </div>
           <div class="form-group"><label class="form-label">Personal Message (optional)</label><textarea id="invite-message" class="form-input form-textarea" placeholder="Add a personal note to the invitation..."></textarea></div>
           <button class="btn-primary" style="max-width:260px;" onclick="handleSendInvite()">Send Invitation</button>
+        </div>
+      </div>
+
+      <!-- CREATE MEMBER -->
+      <div id="admin-create-member" style="display:none">
+        <div class="page-header">
+          <h1 class="page-title">Create Member</h1>
+          <p class="page-sub">Create a portal account directly for a family member</p>
+        </div>
+        <div id="create-member-alert"></div>
+        <div style="max-width:500px;">
+          <div class="form-group"><label class="form-label">First Name</label><input type="text" id="create-first-name" class="form-input" placeholder="First name"></div>
+          <div class="form-group"><label class="form-label">Last Name</label><input type="text" id="create-last-name" class="form-input" placeholder="Last name"></div>
+          <div class="form-group"><label class="form-label">Email Address</label><input type="email" id="create-email" class="form-input" placeholder="their@email.com"></div>
+          <div class="form-group"><label class="form-label">Relationship to Preston Family</label><input type="text" id="create-relationship" class="form-input" placeholder="e.g. 7th generation, married in"></div>
+          <div class="form-group">
+            <label class="form-label">Access Level</label>
+            <select id="create-access" class="form-input select-input">
+              <option value="full_member">Full Member</option>
+              <option value="view_only">View Only</option>
+              <option value="contributor">Contributor</option>
+            </select>
+          </div>
+          <button class="btn-primary" id="create-member-btn" data-label="Create Account" style="max-width:260px;" onclick="handleCreateMember()">Create Account</button>
         </div>
       </div>
 
@@ -999,6 +1026,75 @@ async function handleSendInvite() {
   document.getElementById('invite-message').value = '';
 }
 
+async function handleCreateMember() {
+  var firstName = document.getElementById('create-first-name').value.trim();
+  var lastName = document.getElementById('create-last-name').value.trim();
+  var email = document.getElementById('create-email').value.trim();
+  var relationship = document.getElementById('create-relationship').value.trim();
+  var accessLevel = document.getElementById('create-access').value;
+  if (!firstName || !lastName || !email) {
+    return showAlert('create-member-alert', 'Please fill in first name, last name, and email.', 'error');
+  }
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  var tempPassword = '';
+  for (var i = 0; i < 8; i++) tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+
+  var btn = document.getElementById('create-member-btn');
+  btn.disabled = true;
+  btn.textContent = 'Please wait...';
+
+  var { data: { session: adminSession } } = await sb.auth.getSession();
+
+  try {
+    var { data: signUpData, error: signUpError } = await sb.auth.signUp({
+      email: email,
+      password: tempPassword,
+      options: { data: { first_name: firstName, last_name: lastName, email: email, relationship: relationship } }
+    });
+    if (signUpError) throw signUpError;
+    var userId = signUpData.user && signUpData.user.id;
+    if (!userId) throw new Error('User creation failed — no user ID returned.');
+
+    var { error: profileError } = await sb.from('profiles').upsert({
+      id: userId,
+      first_name: firstName,
+      last_name: lastName,
+      full_name: firstName + ' ' + lastName,
+      email: email,
+      relationship: relationship,
+      access_level: accessLevel,
+      status: 'active'
+    });
+    if (profileError) throw profileError;
+
+    if (adminSession) {
+      await sb.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminSession.refresh_token });
+      currentUser = (await sb.auth.getUser()).data.user;
+    }
+
+    btn.disabled = false;
+    btn.textContent = btn.dataset.label;
+    showAlert('create-member-alert',
+      'Account created for ' + firstName + ' ' + lastName + '! Temporary password: ' + tempPassword + ' — share this with them and ask them to change it after first login.',
+      'success'
+    );
+    document.getElementById('create-first-name').value = '';
+    document.getElementById('create-last-name').value = '';
+    document.getElementById('create-email').value = '';
+    document.getElementById('create-relationship').value = '';
+    logActivity('member_created', 'profile', userId, { email: email, access_level: accessLevel });
+    await loadMembers();
+  } catch (err) {
+    if (adminSession) {
+      await sb.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminSession.refresh_token });
+      currentUser = (await sb.auth.getUser()).data.user;
+    }
+    btn.disabled = false;
+    btn.textContent = btn.dataset.label;
+    showAlert('create-member-alert', err.message, 'error');
+  }
+}
+
 async function loadActivity() {
   const { data } = await sb.from('activity_log').select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(50);
   const el = document.getElementById('activity-list');
@@ -1049,11 +1145,11 @@ function showMemberSection(id) {
 }
 
 function showAdminSection(id) {
-  ['admin-dashboard','admin-applications','admin-members','admin-contributions','admin-invite','admin-activity'].forEach(s => {
+  ['admin-dashboard','admin-applications','admin-members','admin-contributions','admin-invite','admin-create-member','admin-activity'].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = s === id ? 'block' : 'none';
   });
-  ['anav-dashboard','anav-applications','anav-members','anav-contributions','anav-invite','anav-activity'].forEach(n => {
+  ['anav-dashboard','anav-applications','anav-members','anav-contributions','anav-invite','anav-create-member','anav-activity'].forEach(n => {
     const el = document.getElementById(n);
     if (el) el.classList.toggle('active', n === 'anav-' + id.replace('admin-',''));
   });
