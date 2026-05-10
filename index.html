@@ -730,12 +730,14 @@ async function handleLogin() {
     await sb.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
     const { data: userData } = await sb.auth.getUser();
     currentUser = userData.user;
+    console.log('Login: currentUser =', currentUser?.id, currentUser?.email);
   } catch (err) {
     setLoading('login-btn', false);
     return showAlert('login-alert', err.message, 'error');
   }
   setLoading('login-btn', false);
   await loadProfile();
+  console.log('Login: currentProfile =', JSON.stringify(currentProfile));
   logActivity('login', 'auth', null, { email });
   routeUser();
 }
