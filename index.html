@@ -1044,13 +1044,18 @@ async function handleCreateMember() {
   btn.textContent = 'Please wait...';
 
   try {
-    var { data: signUpData, error: signUpError } = await sb.auth.signUp({
-      email: email,
-      password: tempPassword,
-      options: { data: { first_name: firstName, last_name: lastName, email: email, relationship: relationship } }
+    const signUpResp = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        password: tempPassword,
+        data: { first_name: firstName, last_name: lastName, relationship: relationship }
+      })
     });
-    if (signUpError) throw signUpError;
-    var userId = signUpData.user && signUpData.user.id;
+    const signUpJson = await signUpResp.json();
+    if (!signUpResp.ok) throw new Error(signUpJson.error_description || signUpJson.msg || 'Signup failed');
+    var userId = signUpJson.id;
     if (!userId) throw new Error('User creation failed — no user ID returned.');
 
     var { error: profileError } = await sb.from('profiles').upsert({
