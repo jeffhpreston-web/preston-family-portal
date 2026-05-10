@@ -1043,8 +1043,6 @@ async function handleCreateMember() {
   btn.disabled = true;
   btn.textContent = 'Please wait...';
 
-  var { data: { session: adminSession } } = await sb.auth.getSession();
-
   try {
     var { data: signUpData, error: signUpError } = await sb.auth.signUp({
       email: email,
@@ -1067,11 +1065,6 @@ async function handleCreateMember() {
     });
     if (profileError) throw profileError;
 
-    if (adminSession) {
-      await sb.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminSession.refresh_token });
-      currentUser = (await sb.auth.getUser()).data.user;
-    }
-
     btn.disabled = false;
     btn.textContent = btn.dataset.label;
     showAlert('create-member-alert',
@@ -1085,10 +1078,6 @@ async function handleCreateMember() {
     logActivity('member_created', 'profile', userId, { email: email, access_level: accessLevel });
     await loadMembers();
   } catch (err) {
-    if (adminSession) {
-      await sb.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminSession.refresh_token });
-      currentUser = (await sb.auth.getUser()).data.user;
-    }
     btn.disabled = false;
     btn.textContent = btn.dataset.label;
     showAlert('create-member-alert', err.message, 'error');
