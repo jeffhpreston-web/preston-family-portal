@@ -691,10 +691,23 @@ async function handleLogin() {
   const password = document.getElementById('login-password').value;
   if (!email || !password) return showAlert('login-alert', 'Please enter your email and password.', 'error');
   setLoading('login-btn', true);
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  let data;
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    data = await resp.json();
+    if (!resp.ok) throw new Error(data.error_description || data.message || 'Login failed');
+    await sb.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+    const { data: userData } = await sb.auth.getUser();
+    currentUser = userData.user;
+  } catch (err) {
+    setLoading('login-btn', false);
+    return showAlert('login-alert', err.message, 'error');
+  }
   setLoading('login-btn', false);
-  if (error) return showAlert('login-alert', error.message, 'error');
-  currentUser = data.user;
   await loadProfile();
   logActivity('login', 'auth', null, { email });
   routeUser();
