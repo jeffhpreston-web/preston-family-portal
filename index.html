@@ -661,10 +661,10 @@ const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: window.localStorage,
+    storageKey: 'preston-portal-auth',
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
-    lock: async (name, acquireTimeout, fn) => fn()
+    detectSessionInUrl: false
   }
 });
 
@@ -728,6 +728,14 @@ async function handleLogin() {
     data = await resp.json();
     if (!resp.ok) throw new Error(data.error_description || data.message || 'Login failed');
     await sb.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+    try {
+      localStorage.setItem('sb-session-test', '1');
+      localStorage.removeItem('sb-session-test');
+    } catch(e) {
+      // localStorage blocked — store tokens in memory only
+      window._sbAccessToken = data.access_token;
+      window._sbRefreshToken = data.refresh_token;
+    }
     const { data: userData } = await sb.auth.getUser();
     currentUser = userData.user;
     console.log('Login: currentUser =', currentUser?.id, currentUser?.email);
