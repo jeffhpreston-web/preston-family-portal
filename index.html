@@ -675,6 +675,14 @@ let currentProfile = null;
 window.addEventListener('DOMContentLoaded', async () => {
   const stored = localStorage.getItem('preston_access_token');
   if (stored) {
+    const expires = parseInt(localStorage.getItem('preston_token_expires') || '0');
+    if (Date.now() > expires - 60000) {
+      localStorage.removeItem('preston_access_token');
+      localStorage.removeItem('preston_token_expires');
+      window._accessToken = null;
+      return;
+    }
+    window._refreshToken = localStorage.getItem('preston_refresh_token');
     window._accessToken = stored;
     const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${stored}` }
@@ -754,6 +762,8 @@ async function handleLogin() {
     window._accessToken = accessToken;
     window._refreshToken = refreshToken;
     localStorage.setItem('preston_access_token', accessToken);
+    localStorage.setItem('preston_token_expires', (Date.now() + (data.expires_in * 1000)).toString());
+    localStorage.setItem('preston_refresh_token', refreshToken);
     setLoading('login-btn', false);
     console.log('Login: currentUser =', currentUser?.id, currentUser?.email);
     console.log('Login: currentProfile =', JSON.stringify(currentProfile));
@@ -796,6 +806,8 @@ async function handleAdminLogin() {
       throw new Error('Access denied. Admin accounts only.');
     }
     localStorage.setItem('preston_access_token', accessToken);
+    localStorage.setItem('preston_token_expires', (Date.now() + (data.expires_in * 1000)).toString());
+    localStorage.setItem('preston_refresh_token', refreshToken);
     setLoading('admin-login-btn', false);
     showView('view-admin');
     loadAdminData();
@@ -813,12 +825,41 @@ async function handleSignOut() {
     }).catch(() => {});
   }
   localStorage.removeItem('preston_access_token');
+  localStorage.removeItem('preston_token_expires');
+  localStorage.removeItem('preston_refresh_token');
   window._accessToken = null;
   currentUser = null;
   currentProfile = null;
   showView('view-login');
   showPanel('panel-login');
 }
+
+async function refreshTokenIfNeeded() {
+  const expires = parseInt(localStorage.getItem('preston_token_expires') || '0');
+  if (!window._refreshToken || Date.now() < expires - 300000) return;
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: window._refreshToken })
+    });
+    if (!resp.ok) {
+      localStorage.removeItem('preston_access_token');
+      localStorage.removeItem('preston_token_expires');
+      localStorage.removeItem('preston_refresh_token');
+      window._accessToken = null;
+      showView('view-login');
+      return;
+    }
+    const data = await resp.json();
+    window._accessToken = data.access_token;
+    window._refreshToken = data.refresh_token;
+    localStorage.setItem('preston_access_token', data.access_token);
+    localStorage.setItem('preston_refresh_token', data.refresh_token);
+    localStorage.setItem('preston_token_expires', (Date.now() + data.expires_in * 1000).toString());
+  } catch(e) {}
+}
+setInterval(refreshTokenIfNeeded, 600000);
 
 async function handleApply() {
   const name = document.getElementById('apply-name').value.trim();
