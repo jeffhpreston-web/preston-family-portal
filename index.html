@@ -1566,6 +1566,24 @@ async function emailAdminNewApplication(name, email, heritage) {
   );
 }
 
+async function getSignedUrl(storagePath) {
+  const pathPart = storagePath.includes('/object/contributions/')
+    ? storagePath.split('/object/contributions/')[1]
+    : storagePath;
+  const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/contributions/${pathPart}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ expiresIn: 3600 })
+  });
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return `${SUPABASE_URL}/storage/v1${data.signedURL}`;
+}
+
 async function openCollectionModal(category, subtitle) {
   const modal = document.getElementById('collection-modal');
   document.getElementById('modal-category-title').textContent = category;
@@ -1593,13 +1611,19 @@ async function openCollectionModal(category, subtitle) {
   }
 
   window._modalItems = items;
+  const thumbnailUrls = await Promise.all(
+    items.map(item =>
+      item.file_urls && item.file_urls.length > 0
+        ? getSignedUrl(item.file_urls[item.primary_image_index || 0])
+        : Promise.resolve(null)
+    )
+  );
   document.getElementById('modal-items-grid').innerHTML = items.map((item, index) => {
-    const hasImage = item.file_urls && item.file_urls.length > 0;
-    const imageUrl = hasImage ? item.file_urls[0] : null;
+    const hasImage = thumbnailUrls[index] !== null;
     return `<div style="background:#111; border:1px solid #222; border-radius:8px; overflow:hidden; cursor:pointer;" onclick="openItemDetail(window._modalItems[${index}])">
       ${hasImage
         ? `<div style="height:200px; overflow:hidden; background:#0a0a0a;">
-             <img src="${imageUrl}"
+             <img src="${thumbnailUrls[index]}"
                style="width:100%; height:100%; object-fit:cover; opacity:0.9;"
                onerror="this.parentElement.style.display='none'">
            </div>`
@@ -1634,18 +1658,32 @@ function closeCollectionModal() {
 
 let _currentItem = null;
 
-function openItemDetail(item) {
+async function openItemDetail(item) {
   _currentItem = item;
   // Images
   const imgEl = document.getElementById('item-images');
+  imgEl.innerHTML = '<p style="color:#555; font-size:0.85rem;">Loading images...</p>';
+
   if (item.file_urls && item.file_urls.length > 0) {
-    imgEl.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.75rem;">` +
-      item.file_urls.map(url =>
-        `<div style="height:220px; border-radius:6px; overflow:hidden; background:#0a0a0a;">
-          <img src="${url}" style="width:100%; height:100%; object-fit:cover;"
-            onerror="this.parentElement.innerHTML='<div style=padding:1rem;color:#444;font-size:0.75rem>File attached</div>'">
-        </div>`
-      ).join('') + '</div>';
+    const signedUrls = await Promise.all(item.file_urls.map(url => getSignedUrl(url)));
+    const validUrls = signedUrls.filter(Boolean);
+
+    if (validUrls.length > 0) {
+      imgEl.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.75rem; margin-bottom:1rem;">` +
+        validUrls.map((url, i) =>
+          `<div style="position:relative; height:220px; border-radius:6px; overflow:hidden; background:#0a0a0a; cursor:pointer; border:2px solid ${i === (item.primary_image_index || 0) ? '#c0392b' : '#222'};"
+            onclick="setPrimaryImage(${i})" title="Click to set as primary photo">
+            <img src="${url}" style="width:100%; height:100%; object-fit:cover;"
+              onerror="this.parentElement.style.display='none'">
+            ${i === (item.primary_image_index || 0)
+              ? '<div style="position:absolute; bottom:0; left:0; right:0; background:rgba(192,57,43,0.8); text-align:center; padding:0.25rem; font-size:0.7rem; color:#fff;">PRIMARY PHOTO</div>'
+              : '<div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.5); text-align:center; padding:0.25rem; font-size:0.7rem; color:#aaa;">Click to set primary</div>'}
+          </div>`
+        ).join('') + '</div>';
+      window._currentSignedUrls = validUrls;
+    } else {
+      imgEl.innerHTML = '<p style="color:#555; font-size:0.85rem; font-style:italic;">Unable to load images.</p>';
+    }
   } else {
     imgEl.innerHTML = '<p style="color:#555; font-size:0.85rem; font-style:italic;">No images attached.</p>';
   }
@@ -1671,6 +1709,24 @@ function openItemDetail(item) {
 function closeItemDetail() {
   document.getElementById('item-detail-overlay').style.display = 'none';
   _currentItem = null;
+}
+
+async function setPrimaryImage(index) {
+  if (!_currentItem) return;
+  const saveResp = await fetch(`${SUPABASE_URL}/rest/v1/contributions?id=eq.${_currentItem.id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ primary_image_index: index })
+  });
+  if (saveResp.ok) {
+    _currentItem.primary_image_index = index;
+    openItemDetail(_currentItem);
+  }
 }
 
 function toggleItemEdit() {
