@@ -725,7 +725,13 @@ function updateFileList(files) {
 window.addEventListener('DOMContentLoaded', async () => {
   initUploadZone();
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeCollectionModal();
+    if (e.key === 'Escape') {
+      if (document.getElementById('item-detail-overlay').style.display !== 'none') {
+        closeItemDetail();
+      } else {
+        closeCollectionModal();
+      }
+    }
   });
   const stored = localStorage.getItem('preston_access_token');
   if (stored) {
@@ -1586,10 +1592,11 @@ async function openCollectionModal(category, subtitle) {
     return;
   }
 
-  document.getElementById('modal-items-grid').innerHTML = items.map(item => {
+  window._modalItems = items;
+  document.getElementById('modal-items-grid').innerHTML = items.map((item, index) => {
     const hasImage = item.file_urls && item.file_urls.length > 0;
     const imageUrl = hasImage ? item.file_urls[0] : null;
-    return `<div style="background:#111; border:1px solid #222; border-radius:8px; overflow:hidden;">
+    return `<div style="background:#111; border:1px solid #222; border-radius:8px; overflow:hidden; cursor:pointer;" onclick="openItemDetail(window._modalItems[${index}])">
       ${hasImage
         ? `<div style="height:200px; overflow:hidden; background:#0a0a0a;">
              <img src="${imageUrl}"
@@ -1624,6 +1631,127 @@ function closeCollectionModal() {
   document.getElementById('collection-modal').style.display = 'none';
   document.body.style.overflow = '';
 }
+
+let _currentItem = null;
+
+function openItemDetail(item) {
+  _currentItem = item;
+  // Images
+  const imgEl = document.getElementById('item-images');
+  if (item.file_urls && item.file_urls.length > 0) {
+    imgEl.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.75rem;">` +
+      item.file_urls.map(url =>
+        `<div style="height:220px; border-radius:6px; overflow:hidden; background:#0a0a0a;">
+          <img src="${url}" style="width:100%; height:100%; object-fit:cover;"
+            onerror="this.parentElement.innerHTML='<div style=padding:1rem;color:#444;font-size:0.75rem>File attached</div>'">
+        </div>`
+      ).join('') + '</div>';
+  } else {
+    imgEl.innerHTML = '<p style="color:#555; font-size:0.85rem; font-style:italic;">No images attached.</p>';
+  }
+  // View mode fields
+  document.getElementById('item-detail-title').textContent = item.title || '';
+  document.getElementById('item-detail-category').textContent = item.category || '';
+  document.getElementById('item-detail-description').textContent = item.description || '—';
+  document.getElementById('item-detail-provenance').textContent = item.provenance || '—';
+  document.getElementById('item-detail-era').textContent = item.era || '—';
+  document.getElementById('item-detail-contributor').textContent =
+    item.profiles?.full_name || 'Family Member';
+  // Show/hide edit button based on ownership
+  const isOwner = currentUser && item.submitted_by === currentUser.id;
+  const isAdmin = currentProfile && currentProfile.access_level === 'admin';
+  document.getElementById('item-edit-btn').style.display =
+    (isOwner || isAdmin) ? 'block' : 'none';
+  // Reset to view mode
+  document.getElementById('item-view-mode').style.display = 'block';
+  document.getElementById('item-edit-mode').style.display = 'none';
+  document.getElementById('item-detail-overlay').style.display = 'block';
+}
+
+function closeItemDetail() {
+  document.getElementById('item-detail-overlay').style.display = 'none';
+  _currentItem = null;
+}
+
+function toggleItemEdit() {
+  const viewMode = document.getElementById('item-view-mode');
+  const editMode = document.getElementById('item-edit-mode');
+  const isEditing = editMode.style.display !== 'none';
+  if (isEditing) {
+    viewMode.style.display = 'block';
+    editMode.style.display = 'none';
+    document.getElementById('item-edit-btn').textContent = '✏ Edit';
+  } else {
+    document.getElementById('edit-title').value = _currentItem.title || '';
+    document.getElementById('edit-description').value = _currentItem.description || '';
+    document.getElementById('edit-provenance').value = _currentItem.provenance || '';
+    document.getElementById('edit-era').value = _currentItem.era || '';
+    document.getElementById('edit-file-list').innerHTML = '';
+    viewMode.style.display = 'none';
+    editMode.style.display = 'block';
+    document.getElementById('item-edit-btn').textContent = '✕ Cancel Edit';
+    // Wire up file input
+    const zone = document.getElementById('edit-upload-zone');
+    const input = document.getElementById('edit-files');
+    zone.onclick = () => input.click();
+    input.onchange = () => {
+      document.getElementById('edit-file-list').innerHTML =
+        Array.from(input.files).map(f =>
+          `<div style="font-size:0.8rem; padding:0.2rem 0; color:#888;">📎 ${f.name}</div>`
+        ).join('');
+    };
+  }
+}
+
+async function saveItemEdit() {
+  if (!_currentItem) return;
+  setLoading('save-edit-btn', true);
+  const title = document.getElementById('edit-title').value.trim();
+  const description = document.getElementById('edit-description').value.trim();
+  const provenance = document.getElementById('edit-provenance').value.trim();
+  const era = document.getElementById('edit-era').value.trim();
+  // Upload any new files
+  const fileInput = document.getElementById('edit-files');
+  const newUrls = [...(_currentItem.file_urls || [])];
+  for (const file of fileInput.files) {
+    const ext = file.name.split('.').pop();
+    const path = `${currentUser.id}/${Date.now()}-${Math.random().toString(36).substring(2,8)}.${ext}`;
+    const uploadResp = await fetch(`${SUPABASE_URL}/storage/v1/object/contributions/${path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${window._accessToken}`,
+        'Content-Type': file.type || 'application/octet-stream',
+        'x-upsert': 'false'
+      },
+      body: file
+    });
+    if (uploadResp.ok) {
+      newUrls.push(`${SUPABASE_URL}/storage/v1/object/contributions/${path}`);
+    }
+  }
+  // Save to DB
+  const saveResp = await fetch(`${SUPABASE_URL}/rest/v1/contributions?id=eq.${_currentItem.id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ title, description, provenance, era, file_urls: newUrls })
+  });
+  setLoading('save-edit-btn', false);
+  if (!saveResp.ok) {
+    const err = await saveResp.json().catch(() => ({}));
+    showAlert('item-edit-alert', err.message || 'Save failed.', 'error');
+    return;
+  }
+  // Update local item and refresh view
+  _currentItem = { ..._currentItem, title, description, provenance, era, file_urls: newUrls };
+  toggleItemEdit();
+  openItemDetail(_currentItem);
+}
 </script>
 
 <div id="collection-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; overflow-y:auto;">
@@ -1645,6 +1773,83 @@ function closeCollectionModal() {
     </div>
     <div id="modal-loading" style="text-align:center; padding:4rem 0; color:#888;">
       Loading...
+    </div>
+  </div>
+</div>
+
+<div id="item-detail-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.97); z-index:1100; overflow-y:auto;">
+  <div style="max-width:800px; margin:0 auto; padding:2rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+      <button onclick="closeItemDetail()" style="background:none; border:1px solid #555; color:#888; padding:0.4rem 0.9rem; border-radius:4px; cursor:pointer; font-size:0.85rem;">
+        ← Back
+      </button>
+      <button id="item-edit-btn" onclick="toggleItemEdit()" style="background:none; border:1px solid #555; color:#888; padding:0.4rem 0.9rem; border-radius:4px; cursor:pointer; font-size:0.85rem;">
+        ✏ Edit
+      </button>
+    </div>
+
+    <!-- Image gallery -->
+    <div id="item-images" style="margin-bottom:1.5rem;"></div>
+
+    <!-- View mode -->
+    <div id="item-view-mode">
+      <h2 id="item-detail-title" style="margin:0 0 0.5rem; font-size:1.6rem; color:#e8e0d0;"></h2>
+      <p id="item-detail-category" style="margin:0 0 1.5rem; color:#888; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;"></p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+        <div>
+          <p style="margin:0 0 0.25rem; font-size:0.7rem; color:#666; text-transform:uppercase; letter-spacing:0.08em;">Description</p>
+          <p id="item-detail-description" style="margin:0; color:#ccc; font-size:0.9rem; line-height:1.6;"></p>
+        </div>
+        <div>
+          <p style="margin:0 0 0.25rem; font-size:0.7rem; color:#666; text-transform:uppercase; letter-spacing:0.08em;">Provenance / History</p>
+          <p id="item-detail-provenance" style="margin:0; color:#ccc; font-size:0.9rem; line-height:1.6;"></p>
+        </div>
+      </div>
+      <div style="display:flex; gap:2rem; padding-top:1rem; border-top:1px solid #222;">
+        <div>
+          <p style="margin:0 0 0.25rem; font-size:0.7rem; color:#666; text-transform:uppercase; letter-spacing:0.08em;">Era</p>
+          <p id="item-detail-era" style="margin:0; color:#ccc; font-size:0.9rem;"></p>
+        </div>
+        <div>
+          <p style="margin:0 0 0.25rem; font-size:0.7rem; color:#666; text-transform:uppercase; letter-spacing:0.08em;">Contributed by</p>
+          <p id="item-detail-contributor" style="margin:0; color:#ccc; font-size:0.9rem;"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit mode (hidden by default) -->
+    <div id="item-edit-mode" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input type="text" id="edit-title" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea id="edit-description" class="form-input" rows="3" style="resize:vertical;"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Provenance / History</label>
+        <textarea id="edit-provenance" class="form-input" rows="3" style="resize:vertical;"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Era</label>
+        <input type="text" id="edit-era" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Add More Files (optional)</label>
+        <div id="edit-upload-zone" style="border:2px dashed #555; border-radius:8px; padding:1.5rem; text-align:center; cursor:pointer;">
+          <p style="margin:0; font-size:0.85rem; color:#888;">Click to add photos or documents</p>
+          <input type="file" id="edit-files" multiple accept="image/*,.pdf,.heic" style="display:none">
+        </div>
+        <div id="edit-file-list" style="margin-top:0.5rem;"></div>
+      </div>
+      <div id="item-edit-alert"></div>
+      <div style="display:flex; gap:1rem; margin-top:1rem;">
+        <button onclick="saveItemEdit()" class="btn-primary" id="save-edit-btn" data-label="Save Changes">Save Changes</button>
+        <button onclick="toggleItemEdit()" style="background:none; border:1px solid #555; color:#888; padding:0.75rem 1.5rem; border-radius:4px; cursor:pointer;">
+          Cancel
+        </button>
+      </div>
     </div>
   </div>
 </div>
