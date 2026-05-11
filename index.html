@@ -289,7 +289,7 @@
           <label class="form-label">Password</label>
           <input type="password" id="login-password" class="form-input" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
         </div>
-        <button class="btn-primary" id="login-btn" onclick="handleLogin()">Sign In to Collection</button>
+        <button class="btn-primary" id="login-btn" data-label="Sign In to Collection" onclick="handleLogin()">Sign In to Collection</button>
         <div class="form-divider">or</div>
         <div class="form-links">
           <button class="form-link" onclick="showPanel('panel-apply')">Request Family Access &rarr;</button>
@@ -718,36 +718,44 @@ async function handleLogin() {
   const password = document.getElementById('login-password').value;
   if (!email || !password) return showAlert('login-alert', 'Please enter your email and password.', 'error');
   setLoading('login-btn', true);
-  let data;
   try {
     const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
       headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-    data = await resp.json();
+    const data = await resp.json();
     if (!resp.ok) throw new Error(data.error_description || data.message || 'Login failed');
-    await sb.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
-    try {
-      localStorage.setItem('sb-session-test', '1');
-      localStorage.removeItem('sb-session-test');
-    } catch(e) {
-      // localStorage blocked — store tokens in memory only
-      window._sbAccessToken = data.access_token;
-      window._sbRefreshToken = data.refresh_token;
-    }
-    const { data: userData } = await sb.auth.getUser();
-    currentUser = userData.user;
+    const accessToken = data.access_token;
+    const refreshToken = data.refresh_token;
+    const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+    const userData = await userResp.json();
+    currentUser = userData;
+    const profileResp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentUser.id}&select=*`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json'
+      }
+    });
+    const profiles = await profileResp.json();
+    currentProfile = profiles[0] || null;
+    window._accessToken = accessToken;
+    window._refreshToken = refreshToken;
+    setLoading('login-btn', false);
     console.log('Login: currentUser =', currentUser?.id, currentUser?.email);
+    console.log('Login: currentProfile =', JSON.stringify(currentProfile));
+    logActivity('login', 'auth', null, { email });
+    routeUser();
   } catch (err) {
     setLoading('login-btn', false);
-    return showAlert('login-alert', err.message, 'error');
+    showAlert('login-alert', err.message, 'error');
   }
-  setLoading('login-btn', false);
-  await loadProfile();
-  console.log('Login: currentProfile =', JSON.stringify(currentProfile));
-  logActivity('login', 'auth', null, { email });
-  routeUser();
 }
 
 async function handleAdminLogin() {
