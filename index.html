@@ -460,6 +460,21 @@
             <label class="form-label">Approximate Era</label>
             <input type="contrib-era" id="contrib-era" class="form-input" placeholder="e.g. 1880s, Victorian, Early 20th Century">
           </div>
+          <div class="form-group">
+            <label class="form-label">Photos & Documents (optional)</label>
+            <div id="upload-drop-zone" style="border: 2px dashed #555; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: border-color 0.2s;">
+              <div id="upload-prompt">
+                <svg viewBox="0 0 40 40" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:0.5rem;">
+                  <path d="M20 28V12M20 12l-6 6M20 12l6 6"/>
+                  <path d="M8 30h24"/>
+                </svg>
+                <p style="margin:0.5rem 0 0.25rem; font-size:0.9rem;">Drop files here or click to browse</p>
+                <p style="margin:0; font-size:0.75rem; color:#888;">JPG, PNG, PDF, HEIC up to 10MB each</p>
+              </div>
+              <input type="file" id="contrib-files" multiple accept="image/*,.pdf,.heic" style="display:none">
+              <div id="upload-file-list" style="margin-top:0.75rem; text-align:left;"></div>
+            </div>
+          </div>
           <button class="btn-primary" style="max-width:300px;" onclick="handleContribute()">Submit for Review</button>
         </div>
       </div>
@@ -675,7 +690,39 @@ let currentUser = null;
 let currentProfile = null;
 
 // -- CHECK SESSION ON LOAD --
+function initUploadZone() {
+  const zone = document.getElementById('upload-drop-zone');
+  const input = document.getElementById('contrib-files');
+  if (!zone || !input) return;
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', e => {
+    e.preventDefault();
+    zone.style.borderColor = '#c0392b';
+  });
+  zone.addEventListener('dragleave', () => {
+    zone.style.borderColor = '#555';
+  });
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.style.borderColor = '#555';
+    input.files = e.dataTransfer.files;
+    updateFileList(input.files);
+  });
+  input.addEventListener('change', () => updateFileList(input.files));
+}
+
+function updateFileList(files) {
+  const list = document.getElementById('upload-file-list');
+  if (!files.length) { list.innerHTML = ''; return; }
+  list.innerHTML = Array.from(files).map(f =>
+    `<div style="font-size:0.8rem; padding:0.25rem 0; border-bottom:1px solid #333;">
+      📎 ${f.name} <span style="color:#888;">(${(f.size/1024/1024).toFixed(1)}MB)</span>
+    </div>`
+  ).join('');
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
+  initUploadZone();
   const stored = localStorage.getItem('preston_access_token');
   if (stored) {
     const expires = parseInt(localStorage.getItem('preston_token_expires') || '0');
@@ -933,13 +980,35 @@ async function handleContribute() {
   const provenance = document.getElementById('contrib-provenance').value.trim();
   const era = document.getElementById('contrib-era').value.trim();
   if (!title) return showAlert('contribute-alert', 'Please enter a title for the item.', 'error');
+  const fileInput = document.getElementById('contrib-files');
+  const fileUrls = [];
+  if (fileInput.files.length > 0) {
+    for (const file of fileInput.files) {
+      const ext = file.name.split('.').pop();
+      const path = `${currentUser.id}/${Date.now()}-${Math.random().toString(36).substring(2,8)}.${ext}`;
+      const uploadResp = await fetch(
+        `${SUPABASE_URL}/storage/v1/object/contributions/${path}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${window._accessToken}`,
+          'Content-Type': file.type || 'application/octet-stream',
+          'x-upsert': 'false'
+        },
+        body: file
+      });
+      if (uploadResp.ok) {
+        fileUrls.push(`${SUPABASE_URL}/storage/v1/object/contributions/${path}`);
+      }
+    }
+  }
   const contribResp = await fetch(`${SUPABASE_URL}/rest/v1/contributions`, {
     method: 'POST',
     headers: {
       'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
       'Content-Type': 'application/json', 'Prefer': 'return=minimal'
     },
-    body: JSON.stringify({ submitted_by: currentUser.id, title, category, description, provenance, era })
+    body: JSON.stringify({ submitted_by: currentUser.id, title, category, description, provenance, era, file_urls: fileUrls })
   });
   if (!contribResp.ok) {
     const err = await contribResp.json().catch(() => ({}));
@@ -947,6 +1016,8 @@ async function handleContribute() {
   }
   showAlert('contribute-alert', 'Thank you! Your contribution has been submitted for review.', 'success');
   logActivity('contribution_submitted', 'contribution', null, { title, category });
+  document.getElementById('contrib-files').value = '';
+  document.getElementById('upload-file-list').innerHTML = '';
 }
 
 async function handleProfileSave() {
@@ -1182,11 +1253,14 @@ async function loadContributions() {
       '<td style="color:var(--grey)">' + (c.profiles?.full_name || c.profiles?.email || '--') + '</td>' +
       '<td style="color:var(--grey)">' + new Date(c.created_at).toLocaleDateString() + '</td>' +
       '<td><span class="badge badge-' + c.status + '">' + c.status + '</span></td>' +
-      '<td style="display:flex;gap:8px;">' +
+      '<td style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
         (c.status === 'pending'
           ? '<button class="btn-sm btn-approve" onclick="approveContrib(\'' + c.id + '\')">Approve</button>' +
             '<button class="btn-sm btn-reject" onclick="rejectContrib(\'' + c.id + '\')">Reject</button>'
           : '--') +
+        (c.file_urls && c.file_urls.length > 0
+          ? ' <a href="' + c.file_urls[0] + '" target="_blank" style="font-size:11px;color:var(--grey);">📎 ' + c.file_urls.length + ' file' + (c.file_urls.length > 1 ? 's' : '') + '</a>'
+          : '') +
       '</td>' +
     '</tr>'; }).join('') +
     '</tbody></table>';
