@@ -655,7 +655,7 @@ const SUPABASE_URL = 'https://witvlkcjvzxxajdwzdep.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpdHZsa2Nqdnp4eGFqZHd6ZGVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NTk0MDIsImV4cCI6MjA4OTAzNTQwMn0.miKL5P-oTz4r1eTE4mCVdr9nbPv43aAzQQ2fREG1PVc';
 
 // ================================================
-// INIT SUPABASE
+// INIT SUPABASE (used only for Edge Functions)
 // ================================================
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -672,28 +672,34 @@ let currentUser = null;
 let currentProfile = null;
 
 // -- CHECK SESSION ON LOAD --
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (session?.user) {
-    currentUser = session.user;
-    await loadProfile();
-  } else {
-    currentUser = null;
-    currentProfile = null;
-  }
-});
-
 window.addEventListener('DOMContentLoaded', async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session?.user) {
-    currentUser = session.user;
-    await loadProfile();
-    routeUser();
+  const stored = localStorage.getItem('preston_access_token');
+  if (stored) {
+    window._accessToken = stored;
+    const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${stored}` }
+    });
+    if (userResp.ok) {
+      currentUser = await userResp.json();
+      await loadProfile();
+      routeUser();
+    } else {
+      localStorage.removeItem('preston_access_token');
+      window._accessToken = null;
+    }
   }
 });
 
 async function loadProfile() {
-  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
-  currentProfile = data;
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentUser.id}&select=*`, {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Accept': 'application/json'
+    }
+  });
+  const profiles = await resp.json();
+  currentProfile = profiles[0] || null;
 }
 
 function routeUser() {
@@ -747,6 +753,7 @@ async function handleLogin() {
     currentProfile = profiles[0] || null;
     window._accessToken = accessToken;
     window._refreshToken = refreshToken;
+    localStorage.setItem('preston_access_token', accessToken);
     setLoading('login-btn', false);
     console.log('Login: currentUser =', currentUser?.id, currentUser?.email);
     console.log('Login: currentProfile =', JSON.stringify(currentProfile));
@@ -761,23 +768,52 @@ async function handleLogin() {
 async function handleAdminLogin() {
   const email = document.getElementById('admin-email').value.trim();
   const password = document.getElementById('admin-password').value;
-  if (!email || !password) return showAlert('admin-login-alert', 'Please enter credentials.', 'error');
+  if (!email || !password) return showAlert('admin-alert', 'Please enter your email and password.', 'error');
   setLoading('admin-login-btn', true);
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  setLoading('admin-login-btn', false);
-  if (error) return showAlert('admin-login-alert', error.message, 'error');
-  currentUser = data.user;
-  await loadProfile();
-  if (currentProfile?.access_level !== 'admin') {
-    await sb.auth.signOut();
-    return showAlert('admin-login-alert', 'This account does not have administrator access.', 'error');
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error_description || data.message || 'Login failed');
+    const accessToken = data.access_token;
+    const refreshToken = data.refresh_token;
+    window._accessToken = accessToken;
+    window._refreshToken = refreshToken;
+    const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` }
+    });
+    const userData = await userResp.json();
+    currentUser = userData;
+    const profileResp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentUser.id}&select=*`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
+    });
+    const profiles = await profileResp.json();
+    currentProfile = profiles[0] || null;
+    if (!currentProfile || currentProfile.access_level !== 'admin') {
+      throw new Error('Access denied. Admin accounts only.');
+    }
+    localStorage.setItem('preston_access_token', accessToken);
+    setLoading('admin-login-btn', false);
+    showView('view-admin');
+    loadAdminData();
+  } catch (err) {
+    setLoading('admin-login-btn', false);
+    showAlert('admin-alert', err.message, 'error');
   }
-  showView('view-admin');
-  loadAdminData();
 }
 
 async function handleSignOut() {
-  await sb.auth.signOut();
+  if (window._accessToken) {
+    fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}` }
+    }).catch(() => {});
+  }
+  localStorage.removeItem('preston_access_token');
+  window._accessToken = null;
   currentUser = null;
   currentProfile = null;
   showView('view-login');
@@ -791,9 +827,16 @@ async function handleApply() {
   const heritage = document.getElementById('apply-heritage').value.trim();
   if (!name || !email || !heritage) return showAlert('apply-alert', 'Please fill in all required fields.', 'error');
   setLoading('apply-btn', true);
-  const { error } = await sb.from('applications').insert({ full_name: name, email, location, heritage_statement: heritage });
+  const applyResp = await fetch(`${SUPABASE_URL}/rest/v1/applications`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ full_name: name, email, location, heritage_statement: heritage })
+  });
   setLoading('apply-btn', false);
-  if (error) return showAlert('apply-alert', error.message, 'error');
+  if (!applyResp.ok) {
+    const err = await applyResp.json().catch(() => ({}));
+    return showAlert('apply-alert', err.message || 'Submission failed.', 'error');
+  }
   showAlert('apply-alert', 'Your application has been submitted. We will review it and contact you by email.', 'success');
   emailApplicationReceived(name, email).catch(()=>{});
   emailAdminNewApplication(name, email, heritage).catch(()=>{});
@@ -807,11 +850,16 @@ async function handleReset() {
   const email = document.getElementById('reset-email').value.trim();
   if (!email) return showAlert('reset-alert', 'Please enter your email address.', 'error');
   setLoading('reset-btn', true);
-  const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.href
+  const resetResp = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
   });
   setLoading('reset-btn', false);
-  if (error) return showAlert('reset-alert', error.message, 'error');
+  if (!resetResp.ok) {
+    const err = await resetResp.json().catch(() => ({}));
+    return showAlert('reset-alert', err.message || 'Reset failed.', 'error');
+  }
   showAlert('reset-alert', 'Password reset email sent. Please check your inbox.', 'success');
 }
 
@@ -841,22 +889,40 @@ async function handleContribute() {
   const provenance = document.getElementById('contrib-provenance').value.trim();
   const era = document.getElementById('contrib-era').value.trim();
   if (!title) return showAlert('contribute-alert', 'Please enter a title for the item.', 'error');
-  const { error } = await sb.from('contributions').insert({
-    submitted_by: currentUser.id, title, category, description, provenance, era
+  const contribResp = await fetch(`${SUPABASE_URL}/rest/v1/contributions`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ submitted_by: currentUser.id, title, category, description, provenance, era })
   });
-  if (error) return showAlert('contribute-alert', error.message, 'error');
+  if (!contribResp.ok) {
+    const err = await contribResp.json().catch(() => ({}));
+    return showAlert('contribute-alert', err.message || 'Submission failed.', 'error');
+  }
   showAlert('contribute-alert', 'Thank you! Your contribution has been submitted for review.', 'success');
   logActivity('contribution_submitted', 'contribution', null, { title, category });
 }
 
 async function handleProfileSave() {
-  const { error } = await sb.from('profiles').update({
-    full_name: document.getElementById('profile-name').value.trim(),
-    generation: document.getElementById('profile-generation').value.trim(),
-    location: document.getElementById('profile-location').value.trim(),
-    family_branch: document.getElementById('profile-branch').value.trim(),
-  }).eq('id', currentUser.id);
-  if (error) return showAlert('profile-alert', error.message, 'error');
+  const profSaveResp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentUser.id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      full_name: document.getElementById('profile-name').value.trim(),
+      generation: document.getElementById('profile-generation').value.trim(),
+      location: document.getElementById('profile-location').value.trim(),
+      family_branch: document.getElementById('profile-branch').value.trim(),
+    })
+  });
+  if (!profSaveResp.ok) {
+    const err = await profSaveResp.json().catch(() => ({}));
+    return showAlert('profile-alert', err.message || 'Update failed.', 'error');
+  }
   showAlert('profile-alert', 'Profile updated successfully.', 'success');
   await loadProfile();
   populateMemberView();
@@ -865,8 +931,18 @@ async function handleProfileSave() {
 async function handlePasswordChange() {
   const pwd = document.getElementById('new-password').value;
   if (!pwd || pwd.length < 8) return showAlert('profile-alert', 'Password must be at least 8 characters.', 'error');
-  const { error } = await sb.auth.updateUser({ password: pwd });
-  if (error) return showAlert('profile-alert', error.message, 'error');
+  const pwdResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: 'PUT',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ password: pwd })
+  });
+  if (!pwdResp.ok) {
+    const err = await pwdResp.json().catch(() => ({}));
+    return showAlert('profile-alert', err.message || 'Password update failed.', 'error');
+  }
   showAlert('profile-alert', 'Password updated successfully.', 'success');
   document.getElementById('new-password').value = '';
 }
@@ -879,20 +955,34 @@ async function loadAdminData() {
 }
 
 async function loadDashStats() {
+  async function getCount(table, filters) {
+    const qs = filters ? `?select=id&${filters}` : `?select=id`;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${qs}`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+        'Prefer': 'count=exact', 'Range': '0-0'
+      }
+    });
+    const range = r.headers.get('Content-Range');
+    return range ? parseInt(range.split('/')[1]) : NaN;
+  }
   const [members, pending, contribs, total] = await Promise.all([
-    sb.from('profiles').select('id', { count: 'exact' }).in('access_level', ['full_member','view_only','contributor','admin']),
-    sb.from('applications').select('id', { count: 'exact' }).eq('status', 'pending'),
-    sb.from('contributions').select('id', { count: 'exact' }).eq('status', 'pending'),
-    sb.from('profiles').select('id', { count: 'exact' })
+    getCount('profiles', 'access_level=in.(full_member,view_only,contributor,admin)'),
+    getCount('applications', 'status=eq.pending'),
+    getCount('contributions', 'status=eq.pending'),
+    getCount('profiles', null)
   ]);
-  document.getElementById('dash-members').textContent = members.count ?? '--';
-  document.getElementById('dash-pending').textContent = pending.count ?? '--';
-  document.getElementById('dash-contributions').textContent = contribs.count ?? '--';
-  document.getElementById('dash-total').textContent = total.count ?? '--';
-  if (pending.count > 0) document.getElementById('pending-badge').textContent = pending.count;
+  document.getElementById('dash-members').textContent = isNaN(members) ? '--' : members;
+  document.getElementById('dash-pending').textContent = isNaN(pending) ? '--' : pending;
+  document.getElementById('dash-contributions').textContent = isNaN(contribs) ? '--' : contribs;
+  document.getElementById('dash-total').textContent = isNaN(total) ? '--' : total;
+  if (pending > 0) document.getElementById('pending-badge').textContent = pending;
 
   // Recent apps
-  const { data: apps } = await sb.from('applications').select('*').order('created_at', { ascending: false }).limit(5);
+  const appsResp = await fetch(`${SUPABASE_URL}/rest/v1/applications?select=*&order=created_at.desc&limit=5`, {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`, 'Accept': 'application/json' }
+  });
+  const apps = await appsResp.json();
   renderRecentApps(apps || []);
 }
 
@@ -917,7 +1007,10 @@ function renderRecentApps(apps) {
 }
 
 async function loadApplications() {
-  const { data } = await sb.from('applications').select('*').order('created_at', { ascending: false });
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/applications?select=*&order=created_at.desc`, {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`, 'Accept': 'application/json' }
+  });
+  const data = await r.json();
   const el = document.getElementById('applications-list');
   if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9776;</div><p>No applications yet.</p></div>'; return; }
   el.innerHTML = '<table class="data-table">' +
@@ -941,26 +1034,47 @@ async function loadApplications() {
 
 async function approveApp(id, email, name) {
   var tempPwd = 'Preston-' + Math.random().toString(36).substring(2, 10);
-  const { error } = await sb.from('applications').update({
-    status: 'approved', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString(), temp_password: tempPwd
-  }).eq('id', id);
-  if (error) return alert('Error: ' + error.message);
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/applications?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ status: 'approved', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString(), temp_password: tempPwd })
+  });
+  if (!r.ok) return alert('Error updating application.');
   await loadAdminData();
-  var res = await sb.from('profiles').select('member_id').eq('email', email).single();
-  emailApplicationApproved(name, email, res.data?.member_id).catch(()=>{});
+  const profR = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=member_id`, {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`, 'Accept': 'application/json' }
+  });
+  const profiles = await profR.json();
+  emailApplicationApproved(name, email, profiles[0]?.member_id).catch(()=>{});
   alert('Approved! A welcome email has been sent to ' + email);
 }
 
 async function rejectApp(id) {
   if (!confirm('Reject this application?')) return;
-  var res = await sb.from('applications').select('full_name,email').eq('id', id).single();
-  await sb.from('applications').update({ status: 'rejected', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() }).eq('id', id);
-  if (res.data) emailApplicationRejected(res.data.full_name, res.data.email).catch(()=>{});
+  const appR = await fetch(`${SUPABASE_URL}/rest/v1/applications?id=eq.${id}&select=full_name,email`, {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`, 'Accept': 'application/json' }
+  });
+  const apps = await appR.json();
+  await fetch(`${SUPABASE_URL}/rest/v1/applications?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ status: 'rejected', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() })
+  });
+  if (apps[0]) emailApplicationRejected(apps[0].full_name, apps[0].email).catch(()=>{});
   await loadAdminData();
 }
 
 async function loadMembers() {
-  const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=*&order=created_at.desc`, {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`, 'Accept': 'application/json' }
+  });
+  const data = await r.json();
   const el = document.getElementById('members-list');
   if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9786;</div><p>No members yet.</p></div>'; return; }
   el.innerHTML = '<table class="data-table">' +
@@ -985,18 +1099,35 @@ async function loadMembers() {
 }
 
 async function updateMemberAccess(userId, level) {
-  await sb.from('profiles').update({ access_level: level }).eq('id', userId);
+  await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ access_level: level })
+  });
   logActivity('access_level_changed', 'profile', userId, { new_level: level });
 }
 
 async function revokeMember(userId) {
   if (!confirm("Revoke this member's access?")) return;
-  await sb.from('profiles').update({ access_level: 'pending', status: 'revoked' }).eq('id', userId);
+  await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ access_level: 'pending', status: 'revoked' })
+  });
   loadMembers();
 }
 
 async function loadContributions() {
-  const { data } = await sb.from('contributions').select('*, profiles(full_name, email)').order('created_at', { ascending: false });
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/contributions?select=*,profiles(full_name,email)&order=created_at.desc`, {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`, 'Accept': 'application/json' }
+  });
+  const data = await r.json();
   const el = document.getElementById('contributions-list');
   if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#8853;</div><p>No contributions yet.</p></div>'; return; }
   el.innerHTML = '<table class="data-table">' +
@@ -1018,11 +1149,25 @@ async function loadContributions() {
 }
 
 async function approveContrib(id) {
-  await sb.from('contributions').update({ status: 'approved', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() }).eq('id', id);
+  await fetch(`${SUPABASE_URL}/rest/v1/contributions?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ status: 'approved', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() })
+  });
   loadContributions();
 }
 async function rejectContrib(id) {
-  await sb.from('contributions').update({ status: 'rejected', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() }).eq('id', id);
+  await fetch(`${SUPABASE_URL}/rest/v1/contributions?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ status: 'rejected', reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() })
+  });
   loadContributions();
 }
 
@@ -1032,10 +1177,18 @@ async function handleSendInvite() {
   const access = document.getElementById('invite-access').value;
   const message = document.getElementById('invite-message').value.trim();
   if (!email) return showAlert('invite-alert', 'Please enter an email address.', 'error');
-  const { error } = await sb.from('invitations').insert({
-    email, full_name: name, invited_by: currentUser.id, access_level: access, message
+  const invResp = await fetch(`${SUPABASE_URL}/rest/v1/invitations`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ email, full_name: name, invited_by: currentUser.id, access_level: access, message })
   });
-  if (error) return showAlert('invite-alert', error.message, 'error');
+  if (!invResp.ok) {
+    const err = await invResp.json().catch(() => ({}));
+    return showAlert('invite-alert', err.message || 'Failed to send invitation.', 'error');
+  }
   logActivity('invitation_sent', 'invitation', null, { email, name, access_level: access });
   emailInvitation(name, email, access, message).catch(() => {});
   showAlert('invite-alert', 'Invitation sent to ' + email + '.', 'success');
@@ -1062,16 +1215,23 @@ async function handleCreateMember() {
   btn.textContent = 'Please wait...';
 
   try {
-    const { data: rpcData, error: rpcError } = await sb.rpc('admin_create_user', {
-      p_email: email,
-      p_password: tempPassword,
-      p_first_name: firstName,
-      p_last_name: lastName,
-      p_family_branch: relationship,
-      p_access_level: accessLevel
+    const rpcResp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_create_user`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        p_email: email, p_password: tempPassword,
+        p_first_name: firstName, p_last_name: lastName,
+        p_family_branch: relationship, p_access_level: accessLevel
+      })
     });
-    if (rpcError) throw new Error('Failed to create user: ' + rpcError.message);
-    var userId = rpcData;
+    if (!rpcResp.ok) {
+      const err = await rpcResp.json().catch(() => ({}));
+      throw new Error('Failed to create user: ' + (err.message || rpcResp.statusText));
+    }
+    var userId = await rpcResp.json();
     if (!userId) throw new Error('User creation failed — no ID returned.');
 
     btn.disabled = false;
@@ -1095,7 +1255,10 @@ async function handleCreateMember() {
 }
 
 async function loadActivity() {
-  const { data } = await sb.from('activity_log').select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(50);
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/activity_log?select=*,profiles(full_name,email)&order=created_at.desc&limit=50`, {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`, 'Accept': 'application/json' }
+  });
+  const data = await r.json();
   const el = document.getElementById('activity-list');
   if (!data?.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9203;</div><p>No activity recorded yet.</p></div>'; return; }
   el.innerHTML = '<table class="data-table">' +
@@ -1111,9 +1274,13 @@ async function loadActivity() {
 
 async function logActivity(action, entityType, entityId, details) {
   if (!currentUser) return;
-  await sb.from('activity_log').insert({
-    user_id: currentUser.id, action, entity_type: entityType,
-    entity_id: entityId || null, details
+  await fetch(`${SUPABASE_URL}/rest/v1/activity_log`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ user_id: currentUser.id, action, entity_type: entityType, entity_id: entityId || null, details })
   });
 }
 
