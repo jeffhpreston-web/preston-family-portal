@@ -390,7 +390,7 @@
         <div class="nav-item" onclick="showMemberSection('section-contribute')" id="nav-contribute">
           <span class="nav-icon">+</span> Contribute
         </div>
-        <div class="nav-item" onclick="showMemberSection('section-profile')" id="nav-profile">
+        <div class="nav-item" onclick="showMemberSection('section-profile'); loadMyCollections();" id="nav-profile">
           <span class="nav-icon">&#9711;</span> My Profile
         </div>
       </nav>
@@ -450,6 +450,15 @@
             </select>
           </div>
           <div class="form-group">
+            <label class="form-label">Collection (optional)</label>
+            <select id="contrib-collection" class="form-input select-input">
+              <option value="">— No collection —</option>
+            </select>
+            <p style="margin:0.25rem 0 0; font-size:0.75rem; color:#666;">
+              Tag this item to one of your collections. Create collections in My Profile.
+            </p>
+          </div>
+          <div class="form-group">
             <label class="form-label">Description</label>
             <textarea id="contrib-desc" class="form-input form-textarea" placeholder="Describe the item &mdash; what it is, its significance..."></textarea>
           </div>
@@ -505,6 +514,28 @@
             <input type="text" id="profile-branch" class="form-input" placeholder="e.g. Australian branch, London line">
           </div>
           <button class="btn-primary" style="max-width:240px;" onclick="handleProfileSave()">Save Changes</button>
+
+          <div style="margin-top:2rem; padding-top:2rem; border-top:1px solid #222;">
+            <h3 style="margin:0 0 1rem; font-size:1rem; color:#e8e0d0;">My Collections</h3>
+            <p style="margin:0 0 1rem; font-size:0.85rem; color:#888;">
+              Create named collections to organize your submissions. You can submit
+              items on behalf of other family members by creating a collection in their name.
+            </p>
+            <div id="my-collections-list" style="margin-bottom:1rem;"></div>
+            <div style="display:flex; gap:0.75rem; align-items:flex-end;">
+              <div style="flex:1;">
+                <input type="text" id="new-collection-name" class="form-input"
+                  placeholder="e.g. Jeff Preston Collection">
+              </div>
+              <button onclick="handleCreateCollection()" class="btn-primary"
+                id="create-collection-btn" data-label="Add Collection"
+                style="white-space:nowrap; padding:0.75rem 1.25rem;">
+                Add Collection
+              </button>
+            </div>
+            <div id="collection-mgmt-alert" style="margin-top:0.75rem;"></div>
+          </div>
+
           <div style="margin-top:32px; padding-top:32px; border-top:1px solid var(--border);">
             <div class="panel-label" style="margin-bottom:16px;">Change Password</div>
             <div class="form-group">
@@ -981,6 +1012,7 @@ function populateMemberView() {
   document.getElementById('profile-generation').value = currentProfile.generation || '';
   document.getElementById('profile-location').value = currentProfile.location || '';
   document.getElementById('profile-branch').value = currentProfile.family_branch || '';
+  loadMyCollections();
 }
 
 async function handleContribute() {
@@ -1018,7 +1050,10 @@ async function handleContribute() {
       'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
       'Content-Type': 'application/json', 'Prefer': 'return=minimal'
     },
-    body: JSON.stringify({ submitted_by: currentUser.id, title, category, description, provenance, era, file_urls: fileUrls })
+    body: JSON.stringify({ submitted_by: currentUser.id, title, category, description, provenance, era, file_urls: fileUrls,
+      collection_id: document.getElementById('contrib-collection').value || null,
+      collection_name: document.getElementById('contrib-collection').selectedOptions[0]?.dataset?.name || null
+    })
   });
   if (!contribResp.ok) {
     const err = await contribResp.json().catch(() => ({}));
@@ -1070,6 +1105,82 @@ async function handlePasswordChange() {
   }
   showAlert('profile-alert', 'Password updated successfully.', 'success');
   document.getElementById('new-password').value = '';
+}
+
+async function loadMyCollections() {
+  if (!currentUser) return;
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/collections?owner_id=eq.${currentUser.id}&select=*&order=created_at.asc`, {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Accept': 'application/json'
+    }
+  });
+  const collections = await resp.json();
+  window._myCollections = collections || [];
+
+  const listEl = document.getElementById('my-collections-list');
+  if (listEl) {
+    if (!collections.length) {
+      listEl.innerHTML = '<p style="font-size:0.85rem; color:#555; font-style:italic;">No collections yet.</p>';
+    } else {
+      listEl.innerHTML = collections.map(c =>
+        `<div style="display:flex; justify-content:space-between; align-items:center;
+          padding:0.6rem 0.75rem; background:#111; border-radius:4px; margin-bottom:0.5rem;">
+          <span style="font-size:0.9rem; color:#e8e0d0;">${c.name}</span>
+          <button onclick="handleDeleteCollection('${c.id}')"
+            style="background:none; border:none; color:#555; cursor:pointer;
+            font-size:0.8rem; padding:0.2rem 0.5rem;"
+            title="Delete collection">&#x2715;</button>
+        </div>`
+      ).join('');
+    }
+  }
+
+  const select = document.getElementById('contrib-collection');
+  if (select) {
+    select.innerHTML = '<option value="">— No collection —</option>' +
+      collections.map(c =>
+        `<option value="${c.id}" data-name="${c.name}">${c.name}</option>`
+      ).join('');
+  }
+}
+
+async function handleCreateCollection() {
+  const name = document.getElementById('new-collection-name').value.trim();
+  if (!name) return showAlert('collection-mgmt-alert', 'Please enter a collection name.', 'error');
+  setLoading('create-collection-btn', true);
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/collections`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ name, owner_id: currentUser.id })
+  });
+  setLoading('create-collection-btn', false);
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    return showAlert('collection-mgmt-alert', err.message || 'Failed to create collection.', 'error');
+  }
+  document.getElementById('new-collection-name').value = '';
+  showAlert('collection-mgmt-alert', `"${name}" created successfully.`, 'success');
+  await loadMyCollections();
+}
+
+async function handleDeleteCollection(id) {
+  if (!confirm('Delete this collection? Items tagged to it will become untagged.')) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/collections?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`
+    }
+  });
+  await loadMyCollections();
 }
 
 // ================================================
@@ -1589,13 +1700,14 @@ async function openCollectionModal(category, subtitle) {
   document.getElementById('modal-category-title').textContent = category;
   document.getElementById('modal-category-sub').textContent = subtitle;
   document.getElementById('modal-items-grid').innerHTML = '';
+  document.getElementById('modal-filter-bar').innerHTML = '';
   document.getElementById('modal-empty').style.display = 'none';
   document.getElementById('modal-loading').style.display = 'block';
   modal.style.display = 'block';
   document.body.style.overflow = 'hidden';
 
   const resp = await fetch(
-    `${SUPABASE_URL}/rest/v1/contributions?select=*,profiles!contributions_submitted_by_fkey(full_name)&status=eq.approved&category=eq.${encodeURIComponent(category)}&order=created_at.desc`, {
+    `${SUPABASE_URL}/rest/v1/contributions?select=*,profiles!contributions_submitted_by_fkey(full_name),collection_name,collection_id&status=eq.approved&category=eq.${encodeURIComponent(category)}&order=created_at.desc`, {
     headers: {
       'apikey': SUPABASE_ANON_KEY,
       'Authorization': `Bearer ${window._accessToken}`,
@@ -1610,7 +1722,6 @@ async function openCollectionModal(category, subtitle) {
     return;
   }
 
-  window._modalItems = items;
   const thumbnailUrls = await Promise.all(
     items.map(item =>
       item.file_urls && item.file_urls.length > 0
@@ -1618,18 +1729,47 @@ async function openCollectionModal(category, subtitle) {
         : Promise.resolve(null)
     )
   );
-  document.getElementById('modal-items-grid').innerHTML = items.map((item, index) => {
-    const hasImage = thumbnailUrls[index] !== null;
-    return `<div style="background:#111; border:1px solid #222; border-radius:8px; overflow:hidden; cursor:pointer;" onclick="openItemDetail(window._modalItems[${index}])">
+  items.forEach((item, i) => { item._thumbUrl = thumbnailUrls[i]; });
+  window._modalItems = items;
+
+  const collectionNames = [...new Set(
+    items.filter(i => i.collection_name).map(i => i.collection_name)
+  )].sort();
+
+  const filterBar = document.getElementById('modal-filter-bar');
+  if (collectionNames.length > 0) {
+    filterBar.innerHTML = `<select id="collection-filter" onchange="filterModalByCollection()"
+      class="form-input select-input" style="max-width:300px;">
+      <option value="">All Collections</option>
+      ${collectionNames.map(n => `<option value="${n}">${n}</option>`).join('')}
+    </select>`;
+  }
+
+  renderModalGrid(items);
+}
+
+function renderModalGrid(items) {
+  const grid = document.getElementById('modal-items-grid');
+  if (!items.length) {
+    grid.innerHTML = '<p style="color:#666; grid-column:1/-1;">No items in this collection for this category.</p>';
+    return;
+  }
+  grid.innerHTML = items.map(item => {
+    const hasImage = item._thumbUrl !== null && item._thumbUrl !== undefined;
+    return `<div style="background:#111; border:1px solid #222; border-radius:8px; overflow:hidden; cursor:pointer;" onclick="openItemDetail(window._modalItems.find(i => i.id === '${item.id}'))">
       ${hasImage
         ? `<div style="height:200px; overflow:hidden; background:#0a0a0a;">
-             <img src="${thumbnailUrls[index]}"
+             <img src="${item._thumbUrl}"
                style="width:100%; height:100%; object-fit:cover; opacity:0.9;"
                onerror="this.parentElement.style.display='none'">
            </div>`
         : `<div style="height:120px; background:#0d0d0d; display:flex; align-items:center; justify-content:center; color:#333; font-size:2rem;">&#9723;</div>`
       }
       <div style="padding:1rem;">
+        ${item.collection_name
+          ? `<div style="font-size:0.7rem; color:#c0392b; margin-bottom:0.5rem;
+               text-transform:uppercase; letter-spacing:0.05em;">${item.collection_name}</div>`
+          : ''}
         <h4 style="margin:0 0 0.4rem; font-size:0.95rem; color:#e8e0d0;">${item.title}</h4>
         ${item.description
           ? `<p style="margin:0 0 0.5rem; font-size:0.8rem; color:#888; line-height:1.5;">${item.description}</p>`
@@ -1649,6 +1789,19 @@ async function openCollectionModal(category, subtitle) {
       </div>
     </div>`;
   }).join('');
+}
+
+function filterModalByCollection() {
+  const filter = document.getElementById('collection-filter')?.value || '';
+  const items = window._modalItems || [];
+  const filtered = filter ? items.filter(i => i.collection_name === filter) : items;
+  const grid = document.getElementById('modal-items-grid');
+  if (!filtered.length) {
+    grid.innerHTML = '<p style="color:#666; grid-column:1/-1;">No items in this collection for this category.</p>';
+    return;
+  }
+  window._modalItems = items;
+  renderModalGrid(filtered);
 }
 
 function closeCollectionModal() {
@@ -1690,6 +1843,14 @@ async function openItemDetail(item) {
   // View mode fields
   document.getElementById('item-detail-title').textContent = item.title || '';
   document.getElementById('item-detail-category').textContent = item.category || '';
+  const collEl = document.getElementById('item-detail-collection');
+  if (item.collection_name) {
+    collEl.textContent = item.collection_name;
+    collEl.style.display = 'block';
+  } else {
+    collEl.textContent = '';
+    collEl.style.display = 'none';
+  }
   document.getElementById('item-detail-description').textContent = item.description || '—';
   document.getElementById('item-detail-provenance').textContent = item.provenance || '—';
   document.getElementById('item-detail-era').textContent = item.era || '—';
@@ -1743,6 +1904,14 @@ function toggleItemEdit() {
     document.getElementById('edit-provenance').value = _currentItem.provenance || '';
     document.getElementById('edit-era').value = _currentItem.era || '';
     document.getElementById('edit-file-list').innerHTML = '';
+    const editCollSelect = document.getElementById('edit-collection');
+    if (editCollSelect) {
+      const colls = window._myCollections || [];
+      editCollSelect.innerHTML = '<option value="">— No collection —</option>' +
+        colls.map(c =>
+          `<option value="${c.id}" data-name="${c.name}"${_currentItem.collection_id === c.id ? ' selected' : ''}>${c.name}</option>`
+        ).join('');
+    }
     viewMode.style.display = 'none';
     editMode.style.display = 'block';
     document.getElementById('item-edit-btn').textContent = '✕ Cancel Edit';
@@ -1795,7 +1964,10 @@ async function saveItemEdit() {
       'Content-Type': 'application/json',
       'Prefer': 'return=minimal'
     },
-    body: JSON.stringify({ title, description, provenance, era, file_urls: newUrls })
+    body: JSON.stringify({ title, description, provenance, era, file_urls: newUrls,
+      collection_id: document.getElementById('edit-collection').value || null,
+      collection_name: document.getElementById('edit-collection').selectedOptions[0]?.dataset?.name || null
+    })
   });
   setLoading('save-edit-btn', false);
   if (!saveResp.ok) {
@@ -1821,6 +1993,7 @@ async function saveItemEdit() {
         ✕ Close
       </button>
     </div>
+    <div id="modal-filter-bar" style="margin-bottom:1.5rem;"></div>
     <div id="modal-items-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:1.5rem;">
     </div>
     <div id="modal-empty" style="display:none; text-align:center; padding:4rem 0; color:#666;">
@@ -1850,7 +2023,8 @@ async function saveItemEdit() {
     <!-- View mode -->
     <div id="item-view-mode">
       <h2 id="item-detail-title" style="margin:0 0 0.5rem; font-size:1.6rem; color:#e8e0d0;"></h2>
-      <p id="item-detail-category" style="margin:0 0 1.5rem; color:#888; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;"></p>
+      <p id="item-detail-category" style="margin:0 0 0.5rem; color:#888; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;"></p>
+      <p id="item-detail-collection" style="margin:0 0 1.5rem; color:#c0392b; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em; display:none;"></p>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
         <div>
           <p style="margin:0 0 0.25rem; font-size:0.7rem; color:#666; text-transform:uppercase; letter-spacing:0.08em;">Description</p>
@@ -1890,6 +2064,12 @@ async function saveItemEdit() {
       <div class="form-group">
         <label class="form-label">Era</label>
         <input type="text" id="edit-era" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Collection</label>
+        <select id="edit-collection" class="form-input select-input">
+          <option value="">— No collection —</option>
+        </select>
       </div>
       <div class="form-group">
         <label class="form-label">Add More Files (optional)</label>
