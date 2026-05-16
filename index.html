@@ -522,14 +522,12 @@
               items on behalf of other family members by creating a collection in their name.
             </p>
             <div id="my-collections-list" style="margin-bottom:1rem;"></div>
-            <div style="display:flex; gap:0.75rem; align-items:flex-end;">
-              <div style="flex:1;">
-                <input type="text" id="new-collection-name" class="form-input"
-                  placeholder="e.g. Jeff Preston Collection">
-              </div>
+            <div style="display:flex; flex-direction:column; gap:0.75rem;">
+              <input type="text" id="new-collection-name" class="form-input"
+                placeholder="e.g. Jeff Preston Collection" style="width:100%;">
               <button onclick="handleCreateCollection()" class="btn-primary"
                 id="create-collection-btn" data-label="Add Collection"
-                style="white-space:nowrap; padding:0.75rem 1.25rem;">
+                style="width:100%; max-width:200px;">
                 Add Collection
               </button>
             </div>
