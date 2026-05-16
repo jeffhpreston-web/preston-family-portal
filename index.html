@@ -435,7 +435,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">Category</label>
-            <select id="contrib-category" class="form-input select-input">
+            <select id="contrib-category" class="form-input select-input" onchange="handleCategoryChange()">
               <option value="Books &amp; Manuscripts">Books &amp; Manuscripts</option>
               <option value="Coins &amp; Currency">Coins &amp; Currency</option>
               <option value="Fine Art &amp; Prints">Fine Art &amp; Prints</option>
@@ -448,6 +448,35 @@
               <option value="Family Artifacts">Family Artifacts</option>
               <option value="Family Archives">Family Archives</option>
             </select>
+          </div>
+          <div id="psa-lookup-section" style="display:none;">
+            <div class="form-group">
+              <label class="form-label">PSA Cert Number</label>
+              <div style="display:flex; gap:0.75rem;">
+                <input type="text" id="psa-cert-number" class="form-input"
+                  placeholder="e.g. 12345678" style="flex:1;">
+                <button onclick="handlePsaLookup()" id="psa-lookup-btn"
+                  data-label="Look Up" class="btn-primary"
+                  style="white-space:nowrap; padding:0.75rem 1.25rem;">
+                  Look Up
+                </button>
+              </div>
+              <div id="psa-lookup-alert" style="margin-top:0.5rem;"></div>
+            </div>
+            <div id="psa-result-preview" style="display:none; background:#111;
+              border:1px solid #222; border-radius:8px; padding:1rem; margin-bottom:1rem;">
+              <div style="display:flex; gap:1rem; align-items:flex-start;">
+                <div id="psa-images" style="display:flex; gap:0.5rem; flex-shrink:0;"></div>
+                <div>
+                  <p id="psa-result-title" style="margin:0 0 0.25rem; font-size:0.95rem;
+                    color:#e8e0d0; font-weight:500;"></p>
+                  <p id="psa-result-grade" style="margin:0 0 0.25rem; font-size:0.85rem;
+                    color:#c0392b;"></p>
+                  <p id="psa-result-details" style="margin:0; font-size:0.8rem;
+                    color:#888;"></p>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Collection (optional)</label>
@@ -1042,6 +1071,33 @@ async function handleContribute() {
       }
     }
   }
+  // Attach PSA images if available
+  if (window._psaImageUrls && window._psaImageUrls.length > 0) {
+    for (const url of window._psaImageUrls) {
+      try {
+        const imgResp = await fetch(url);
+        const blob = await imgResp.blob();
+        const ext = url.includes('Back') ? 'back.jpg' : 'front.jpg';
+        const path = `${currentUser.id}/${Date.now()}-psa-${ext}`;
+        const uploadResp = await fetch(
+          `${SUPABASE_URL}/storage/v1/object/contributions/${path}`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${window._accessToken}`,
+            'Content-Type': 'image/jpeg',
+            'x-upsert': 'false'
+          },
+          body: blob
+        });
+        if (uploadResp.ok) {
+          fileUrls.push(`${SUPABASE_URL}/storage/v1/object/contributions/${path}`);
+        }
+      } catch(e) {}
+    }
+    window._psaImageUrls = [];
+    window._psaCertData = null;
+  }
   const contribResp = await fetch(`${SUPABASE_URL}/rest/v1/contributions`, {
     method: 'POST',
     headers: {
@@ -1050,7 +1106,8 @@ async function handleContribute() {
     },
     body: JSON.stringify({ submitted_by: currentUser.id, title, category, description, provenance, era, file_urls: fileUrls,
       collection_id: document.getElementById('contrib-collection').value || null,
-      collection_name: document.getElementById('contrib-collection').selectedOptions[0]?.dataset?.name || null
+      collection_name: document.getElementById('contrib-collection').selectedOptions[0]?.dataset?.name || null,
+      psa_cert_number: window._psaCertData?.CertNumber || null
     })
   });
   if (!contribResp.ok) {
@@ -1061,6 +1118,10 @@ async function handleContribute() {
   logActivity('contribution_submitted', 'contribution', null, { title, category });
   document.getElementById('contrib-files').value = '';
   document.getElementById('upload-file-list').innerHTML = '';
+  document.getElementById('psa-cert-number').value = '';
+  document.getElementById('psa-result-preview').style.display = 'none';
+  window._psaImageUrls = [];
+  window._psaCertData = null;
 }
 
 async function handleProfileSave() {
@@ -1103,6 +1164,66 @@ async function handlePasswordChange() {
   }
   showAlert('profile-alert', 'Password updated successfully.', 'success');
   document.getElementById('new-password').value = '';
+}
+
+function handleCategoryChange() {
+  const category = document.getElementById('contrib-category').value;
+  const psaSection = document.getElementById('psa-lookup-section');
+  if (psaSection) {
+    psaSection.style.display =
+      category === 'Sports Cards & Memorabilia' ? 'block' : 'none';
+  }
+}
+
+async function handlePsaLookup() {
+  const cert = document.getElementById('psa-cert-number').value.trim();
+  if (!cert) return showAlert('psa-lookup-alert', 'Please enter a PSA cert number.', 'error');
+  setLoading('psa-lookup-btn', true);
+  try {
+    const resp = await fetch(`/api/psa-lookup?cert=${encodeURIComponent(cert)}`);
+    const data = await resp.json();
+    if (!resp.ok || !data.PSACert) {
+      throw new Error(data.error || data.ServerMessage || 'Cert not found.');
+    }
+    const cert_data = data.PSACert;
+    const title = [
+      cert_data.Year,
+      cert_data.Brand,
+      cert_data.Series,
+      cert_data.CardNumber ? '#' + cert_data.CardNumber : '',
+      cert_data.Subject
+    ].filter(Boolean).join(' ');
+    const grade = 'PSA ' + cert_data.CardGrade;
+    const details = `Cert #${cert_data.CertNumber} · ${cert_data.Category || 'Sports Card'}`;
+    document.getElementById('contrib-title').value = title;
+    document.getElementById('contrib-desc').value =
+      `${title} — Graded ${grade} by PSA. Cert #${cert_data.CertNumber}.`;
+    document.getElementById('contrib-era').value = cert_data.Year || '';
+    document.getElementById('psa-result-title').textContent = title;
+    document.getElementById('psa-result-grade').textContent = grade;
+    document.getElementById('psa-result-details').textContent = details;
+    const imagesEl = document.getElementById('psa-images');
+    const imageUrls = [];
+    if (cert_data.FrontImageURL) imageUrls.push(cert_data.FrontImageURL);
+    if (cert_data.BackImageURL) imageUrls.push(cert_data.BackImageURL);
+    if (imageUrls.length > 0) {
+      imagesEl.innerHTML = imageUrls.map((url, i) =>
+        `<img src="${url}" style="height:120px; width:auto; border-radius:4px;
+          border:1px solid #333;" alt="${i === 0 ? 'Front' : 'Back'}">`
+      ).join('');
+      window._psaImageUrls = imageUrls;
+    } else {
+      imagesEl.innerHTML = '<p style="font-size:0.75rem; color:#666;">No images available for this cert.</p>';
+      window._psaImageUrls = [];
+    }
+    document.getElementById('psa-result-preview').style.display = 'block';
+    showAlert('psa-lookup-alert', 'Card found! Form has been auto-populated.', 'success');
+    window._psaCertData = cert_data;
+  } catch (err) {
+    showAlert('psa-lookup-alert', err.message, 'error');
+    document.getElementById('psa-result-preview').style.display = 'none';
+  }
+  setLoading('psa-lookup-btn', false);
 }
 
 async function loadMyCollections() {
