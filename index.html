@@ -224,6 +224,35 @@
                   color:var(--text); padding:6px 12px; font-size:12px;
                   font-family:'Montserrat',sans-serif; outline:none; cursor:pointer; }
 
+  .visibility-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid #333;
+    border-radius: 3px;
+    background: none;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .visibility-toggle.shared {
+    color: #c0392b;
+    border-color: #c0392b;
+  }
+  .field-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+  }
+  .field-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@300;400;500&display=swap');
 </style>
 </head>
@@ -393,7 +422,7 @@
         <div class="nav-item" onclick="showMemberSection('section-contribute')" id="nav-contribute">
           <span class="nav-icon">+</span> Contribute
         </div>
-        <div class="nav-item" onclick="showMemberSection('section-profile'); loadMyCollections();" id="nav-profile">
+        <div class="nav-item" onclick="showMemberSection('section-profile'); loadMyCollections(); populateProfileForm();" id="nav-profile">
           <span class="nav-icon">&#9711;</span> My Profile
         </div>
       </nav>
@@ -561,25 +590,8 @@
           <h1 class="page-title">My Profile</h1>
           <p class="page-sub">Manage your family portal account</p>
         </div>
-        <div id="profile-alert"></div>
-        <div style="max-width:500px;">
-          <div class="form-group">
-            <label class="form-label">Full Name</label>
-            <input type="text" id="profile-name" class="form-input">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Generation</label>
-            <input type="text" id="profile-generation" class="form-input" placeholder="e.g. 7th Generation">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Location</label>
-            <input type="text" id="profile-location" class="form-input" placeholder="City, Country">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Family Branch</label>
-            <input type="text" id="profile-branch" class="form-input" placeholder="e.g. Australian branch, London line">
-          </div>
-          <button class="btn-primary" style="max-width:240px;" onclick="handleProfileSave()">Save Changes</button>
+        <div style="max-width:600px;">
+          <div id="profile-form-body"></div>
 
           <div style="margin-top:2rem; padding-top:2rem; border-top:1px solid #222;">
             <h3 style="margin:0 0 1rem; font-size:1rem; color:#e8e0d0;">My Collections</h3>
@@ -598,15 +610,6 @@
               </button>
             </div>
             <div id="collection-mgmt-alert" style="margin-top:0.75rem;"></div>
-          </div>
-
-          <div style="margin-top:32px; padding-top:32px; border-top:1px solid var(--border);">
-            <div class="panel-label" style="margin-bottom:16px;">Change Password</div>
-            <div class="form-group">
-              <label class="form-label">New Password</label>
-              <input type="password" id="new-password" class="form-input" placeholder="Min 8 characters">
-            </div>
-            <button class="btn-primary" style="max-width:240px;" onclick="handlePasswordChange()">Update Password</button>
           </div>
         </div>
       </div>
@@ -1064,6 +1067,43 @@ async function handleReset() {
 }
 
 // ================================================
+// VISIBILITY HELPERS
+// ================================================
+function getVisibility(field) {
+  const vis = currentProfile?.profile_visibility || {};
+  return vis[field] || 'only_me';
+}
+
+function toggleVisibility(field, btnEl) {
+  if (!currentProfile) return;
+  if (!currentProfile.profile_visibility) currentProfile.profile_visibility = {};
+  const current = currentProfile.profile_visibility[field] || 'only_me';
+  const next = current === 'only_me' ? 'all_members' : 'only_me';
+  currentProfile.profile_visibility[field] = next;
+  updateVisibilityBtn(btnEl, next);
+}
+
+function updateVisibilityBtn(btn, value) {
+  if (!btn) return;
+  if (value === 'all_members') {
+    btn.textContent = '🌐 All Members';
+    btn.classList.add('shared');
+  } else {
+    btn.textContent = '🔒 Only Me';
+    btn.classList.remove('shared');
+  }
+}
+
+function buildVisibilityBtn(field) {
+  const vis = getVisibility(field);
+  const label = vis === 'all_members' ? '🌐 All Members' : '🔒 Only Me';
+  const cls = vis === 'all_members' ? 'visibility-toggle shared' : 'visibility-toggle';
+  return `<button type="button" class="${cls}"
+    onclick="toggleVisibility('${field}', this)"
+    title="Toggle who can see this field">${label}</button>`;
+}
+
+// ================================================
 // MEMBER FUNCTIONS
 // ================================================
 function populateMemberView() {
@@ -1075,13 +1115,328 @@ function populateMemberView() {
   const level = currentProfile.access_level || 'pending';
   document.getElementById('member-badge').textContent = level.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-  // Populate profile fields
-  document.getElementById('profile-name').value = currentProfile.full_name || '';
-  document.getElementById('profile-generation').value = currentProfile.generation || '';
-  document.getElementById('profile-location').value = currentProfile.location || '';
-  document.getElementById('profile-branch').value = currentProfile.family_branch || '';
+  populateProfileForm();
   loadMyCollections();
   loadMyCollectionItems();
+}
+
+function populateProfileForm() {
+  const el = document.getElementById('profile-form-body');
+  if (!el) return;
+  const p = currentProfile || {};
+  const v = p.profile_visibility || {};
+
+  function vBtn(field) {
+    const val = v[field] || 'only_me';
+    const label = val === 'all_members' ? '🌐 All Members' : '🔒 Only Me';
+    const cls = val === 'all_members' ? 'visibility-toggle shared' : 'visibility-toggle';
+    return `<button type="button" class="${cls}"
+      onclick="toggleVisibility('${field}', this)">${label}</button>`;
+  }
+
+  el.innerHTML = `
+    <h3 style="margin:0 0 1rem; font-size:0.85rem; color:#888;
+      text-transform:uppercase; letter-spacing:0.08em;">Basic Information</h3>
+
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" id="profile-name" class="form-input"
+          value="${(p.full_name || '').replace(/"/g, '&quot;')}" placeholder="Your full name">
+      </div>
+      ${vBtn('full_name')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Generation / Lineage</label>
+        <input type="text" id="profile-generation" class="form-input"
+          value="${(p.generation || '').replace(/"/g, '&quot;')}" placeholder="e.g. 7th generation">
+      </div>
+      ${vBtn('generation')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Location</label>
+        <input type="text" id="profile-location" class="form-input"
+          value="${(p.location || '').replace(/"/g, '&quot;')}" placeholder="City, Country">
+      </div>
+      ${vBtn('location')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Family Branch</label>
+        <input type="text" id="profile-branch" class="form-input"
+          value="${(p.family_branch || '').replace(/"/g, '&quot;')}" placeholder="e.g. Preston of Virginia">
+      </div>
+      ${vBtn('family_branch')}
+    </div>
+
+    <h3 style="margin:2rem 0 1rem; font-size:0.85rem; color:#888;
+      text-transform:uppercase; letter-spacing:0.08em;">Contact Information</h3>
+
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Primary Email</label>
+        <input type="email" id="profile-email-primary" class="form-input"
+          value="${(p.email_primary || p.email || '').replace(/"/g, '&quot;')}" placeholder="your@email.com">
+      </div>
+      ${vBtn('email_primary')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Additional Email</label>
+        <input type="email" id="profile-email-secondary" class="form-input"
+          value="${(p.email_secondary || '').replace(/"/g, '&quot;')}" placeholder="additional@email.com">
+      </div>
+      ${vBtn('email_secondary')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input type="tel" id="profile-phone-primary" class="form-input"
+          value="${(p.phone_primary || '').replace(/"/g, '&quot;')}" placeholder="+1 (555) 000-0000">
+      </div>
+      ${vBtn('phone_primary')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Additional Phone</label>
+        <input type="tel" id="profile-phone-secondary" class="form-input"
+          value="${(p.phone_secondary || '').replace(/"/g, '&quot;')}" placeholder="+1 (555) 000-0000">
+      </div>
+      ${vBtn('phone_secondary')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">WhatsApp Number / Name</label>
+        <input type="text" id="profile-whatsapp" class="form-input"
+          value="${(p.whatsapp || '').replace(/"/g, '&quot;')}" placeholder="+1 (555) 000-0000 or username">
+      </div>
+      ${vBtn('whatsapp')}
+    </div>
+
+    <h3 style="margin:2rem 0 1rem; font-size:0.85rem; color:#888;
+      text-transform:uppercase; letter-spacing:0.08em;">Social Media</h3>
+
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Instagram URL</label>
+        <input type="url" id="profile-instagram" class="form-input"
+          value="${(p.instagram_url || '').replace(/"/g, '&quot;')}" placeholder="https://instagram.com/yourhandle">
+      </div>
+      ${vBtn('instagram_url')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Facebook URL</label>
+        <input type="url" id="profile-facebook" class="form-input"
+          value="${(p.facebook_url || '').replace(/"/g, '&quot;')}" placeholder="https://facebook.com/yourprofile">
+      </div>
+      ${vBtn('facebook_url')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">X (Twitter) Handle</label>
+        <input type="text" id="profile-x" class="form-input"
+          value="${(p.x_handle || '').replace(/"/g, '&quot;')}" placeholder="@yourhandle">
+      </div>
+      ${vBtn('x_handle')}
+    </div>
+
+    <h3 style="margin:2rem 0 1rem; font-size:0.85rem; color:#888;
+      text-transform:uppercase; letter-spacing:0.08em;">Residential Address</h3>
+    <div style="margin-bottom:0.5rem;">${vBtn('residential_address')}</div>
+
+    <div class="form-group">
+      <label class="form-label">Street Address Line 1</label>
+      <input type="text" id="profile-res-street1" class="form-input"
+        value="${(p.residential_street1 || '').replace(/"/g, '&quot;')}" placeholder="123 Main St">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Street Address Line 2</label>
+      <input type="text" id="profile-res-street2" class="form-input"
+        value="${(p.residential_street2 || '').replace(/"/g, '&quot;')}" placeholder="Apt, Suite, etc.">
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+      <div class="form-group">
+        <label class="form-label">City</label>
+        <input type="text" id="profile-res-city" class="form-input"
+          value="${(p.residential_city || '').replace(/"/g, '&quot;')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">State / Province</label>
+        <input type="text" id="profile-res-state" class="form-input"
+          value="${(p.residential_state || '').replace(/"/g, '&quot;')}">
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+      <div class="form-group">
+        <label class="form-label">Country</label>
+        <input type="text" id="profile-res-country" class="form-input"
+          value="${(p.residential_country || '').replace(/"/g, '&quot;')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Postal Code</label>
+        <input type="text" id="profile-res-postal" class="form-input"
+          value="${(p.residential_postal || '').replace(/"/g, '&quot;')}">
+      </div>
+    </div>
+
+    <h3 style="margin:2rem 0 1rem; font-size:0.85rem; color:#888;
+      text-transform:uppercase; letter-spacing:0.08em;">Mailing Address</h3>
+    <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+      ${vBtn('mailing_address')}
+      <label style="display:flex; align-items:center; gap:0.5rem;
+        font-size:0.8rem; color:#888; cursor:pointer;">
+        <input type="checkbox" id="same-as-residential"
+          onchange="copyResidentialToMailing(this.checked)">
+        Same as residential
+      </label>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Street Address Line 1</label>
+      <input type="text" id="profile-mail-street1" class="form-input"
+        value="${(p.mailing_street1 || '').replace(/"/g, '&quot;')}" placeholder="123 Main St">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Street Address Line 2</label>
+      <input type="text" id="profile-mail-street2" class="form-input"
+        value="${(p.mailing_street2 || '').replace(/"/g, '&quot;')}" placeholder="Apt, Suite, etc.">
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+      <div class="form-group">
+        <label class="form-label">City</label>
+        <input type="text" id="profile-mail-city" class="form-input"
+          value="${(p.mailing_city || '').replace(/"/g, '&quot;')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">State / Province</label>
+        <input type="text" id="profile-mail-state" class="form-input"
+          value="${(p.mailing_state || '').replace(/"/g, '&quot;')}">
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+      <div class="form-group">
+        <label class="form-label">Country</label>
+        <input type="text" id="profile-mail-country" class="form-input"
+          value="${(p.mailing_country || '').replace(/"/g, '&quot;')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Postal Code</label>
+        <input type="text" id="profile-mail-postal" class="form-input"
+          value="${(p.mailing_postal || '').replace(/"/g, '&quot;')}">
+      </div>
+    </div>
+
+    <h3 style="margin:2rem 0 1rem; font-size:0.85rem; color:#888;
+      text-transform:uppercase; letter-spacing:0.08em;">Family Information</h3>
+
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Father's Name</label>
+        <input type="text" id="profile-father" class="form-input"
+          value="${(p.father_name || '').replace(/"/g, '&quot;')}" placeholder="Full name">
+      </div>
+      ${vBtn('father_name')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Mother's Name</label>
+        <input type="text" id="profile-mother" class="form-input"
+          value="${(p.mother_name || '').replace(/"/g, '&quot;')}" placeholder="Full name">
+      </div>
+      ${vBtn('mother_name')}
+    </div>
+    <div class="field-row">
+      <div class="form-group">
+        <label class="form-label">Spouse / Partner's Name</label>
+        <input type="text" id="profile-spouse" class="form-input"
+          value="${(p.spouse_name || '').replace(/"/g, '&quot;')}" placeholder="Full name">
+      </div>
+      ${vBtn('spouse_name')}
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <div style="display:flex; justify-content:space-between;
+        align-items:center; margin-bottom:0.75rem;">
+        <label class="form-label" style="margin:0;">Children's Names</label>
+        ${vBtn('children_names')}
+      </div>
+      <div id="children-list">
+        ${(p.children_names || []).map((name, i) =>
+          `<div class="field-row" id="child-row-${i}" style="margin-bottom:0.5rem;">
+            <input type="text" class="form-input child-name-input"
+              value="${name.replace(/"/g, '&quot;')}" placeholder="Child's full name" style="flex:1;">
+            <button type="button" onclick="removeChild(${i})"
+              style="background:none; border:1px solid #444; color:#888;
+              padding:0.5rem 0.75rem; border-radius:4px; cursor:pointer;
+              flex-shrink:0;">&#x2715;</button>
+          </div>`
+        ).join('')}
+      </div>
+      <button type="button" onclick="addChild()"
+        style="background:none; border:1px dashed #444; color:#888;
+        padding:0.5rem 1rem; border-radius:4px; cursor:pointer;
+        font-size:0.85rem; width:100%; margin-top:0.25rem;">
+        + Add Child
+      </button>
+    </div>
+
+    <div id="profile-alert" style="margin-top:1rem;"></div>
+    <button class="btn-primary" onclick="handleProfileSave()"
+      id="profile-save-btn" data-label="Save Profile"
+      style="max-width:200px; margin-top:1rem;">Save Profile</button>
+
+    <h3 style="margin:2rem 0 1rem; font-size:0.85rem; color:#888;
+      text-transform:uppercase; letter-spacing:0.08em;
+      padding-top:2rem; border-top:1px solid #222;">Change Password</h3>
+    <div class="form-group" style="max-width:400px;">
+      <label class="form-label">New Password</label>
+      <input type="password" id="new-password" class="form-input"
+        placeholder="Minimum 8 characters">
+    </div>
+    <button class="btn-primary" onclick="handlePasswordChange()"
+      style="max-width:200px;">Update Password</button>
+  `;
+}
+
+function copyResidentialToMailing(checked) {
+  if (!checked) return;
+  document.getElementById('profile-mail-street1').value =
+    document.getElementById('profile-res-street1').value;
+  document.getElementById('profile-mail-street2').value =
+    document.getElementById('profile-res-street2').value;
+  document.getElementById('profile-mail-city').value =
+    document.getElementById('profile-res-city').value;
+  document.getElementById('profile-mail-state').value =
+    document.getElementById('profile-res-state').value;
+  document.getElementById('profile-mail-country').value =
+    document.getElementById('profile-res-country').value;
+  document.getElementById('profile-mail-postal').value =
+    document.getElementById('profile-res-postal').value;
+}
+
+function addChild() {
+  const list = document.getElementById('children-list');
+  const idx = list.children.length;
+  const div = document.createElement('div');
+  div.className = 'field-row';
+  div.id = `child-row-${idx}`;
+  div.style.marginBottom = '0.5rem';
+  div.innerHTML = `
+    <input type="text" class="form-input child-name-input"
+      placeholder="Child's full name" style="flex:1;">
+    <button type="button" onclick="removeChild(${idx})"
+      style="background:none; border:1px solid #444; color:#888;
+      padding:0.5rem 0.75rem; border-radius:4px; cursor:pointer;
+      flex-shrink:0;">&#x2715;</button>`;
+  list.appendChild(div);
+}
+
+function removeChild(idx) {
+  const row = document.getElementById(`child-row-${idx}`);
+  if (row) row.remove();
 }
 
 async function handleContribute() {
@@ -1167,26 +1522,61 @@ async function handleContribute() {
 }
 
 async function handleProfileSave() {
-  const profSaveResp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentUser.id}`, {
+  const childInputs = document.querySelectorAll('.child-name-input');
+  const children = Array.from(childInputs).map(i => i.value.trim()).filter(Boolean);
+
+  const profileData = {
+    full_name: document.getElementById('profile-name')?.value.trim() || '',
+    generation: document.getElementById('profile-generation')?.value.trim() || '',
+    location: document.getElementById('profile-location')?.value.trim() || '',
+    family_branch: document.getElementById('profile-branch')?.value.trim() || '',
+    email_primary: document.getElementById('profile-email-primary')?.value.trim() || '',
+    email_secondary: document.getElementById('profile-email-secondary')?.value.trim() || '',
+    phone_primary: document.getElementById('profile-phone-primary')?.value.trim() || '',
+    phone_secondary: document.getElementById('profile-phone-secondary')?.value.trim() || '',
+    whatsapp: document.getElementById('profile-whatsapp')?.value.trim() || '',
+    instagram_url: document.getElementById('profile-instagram')?.value.trim() || '',
+    facebook_url: document.getElementById('profile-facebook')?.value.trim() || '',
+    x_handle: document.getElementById('profile-x')?.value.trim() || '',
+    residential_street1: document.getElementById('profile-res-street1')?.value.trim() || '',
+    residential_street2: document.getElementById('profile-res-street2')?.value.trim() || '',
+    residential_city: document.getElementById('profile-res-city')?.value.trim() || '',
+    residential_state: document.getElementById('profile-res-state')?.value.trim() || '',
+    residential_country: document.getElementById('profile-res-country')?.value.trim() || '',
+    residential_postal: document.getElementById('profile-res-postal')?.value.trim() || '',
+    mailing_street1: document.getElementById('profile-mail-street1')?.value.trim() || '',
+    mailing_street2: document.getElementById('profile-mail-street2')?.value.trim() || '',
+    mailing_city: document.getElementById('profile-mail-city')?.value.trim() || '',
+    mailing_state: document.getElementById('profile-mail-state')?.value.trim() || '',
+    mailing_country: document.getElementById('profile-mail-country')?.value.trim() || '',
+    mailing_postal: document.getElementById('profile-mail-postal')?.value.trim() || '',
+    father_name: document.getElementById('profile-father')?.value.trim() || '',
+    mother_name: document.getElementById('profile-mother')?.value.trim() || '',
+    spouse_name: document.getElementById('profile-spouse')?.value.trim() || '',
+    children_names: children,
+    profile_visibility: currentProfile?.profile_visibility || {}
+  };
+
+  setLoading('profile-save-btn', true);
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentUser.id}`, {
     method: 'PATCH',
     headers: {
-      'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${window._accessToken}`,
-      'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
     },
-    body: JSON.stringify({
-      full_name: document.getElementById('profile-name').value.trim(),
-      generation: document.getElementById('profile-generation').value.trim(),
-      location: document.getElementById('profile-location').value.trim(),
-      family_branch: document.getElementById('profile-branch').value.trim(),
-    })
+    body: JSON.stringify(profileData)
   });
-  if (!profSaveResp.ok) {
-    const err = await profSaveResp.json().catch(() => ({}));
-    return showAlert('profile-alert', err.message || 'Update failed.', 'error');
+  setLoading('profile-save-btn', false);
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    return showAlert('profile-alert', err.message || 'Save failed.', 'error');
   }
-  showAlert('profile-alert', 'Profile updated successfully.', 'success');
-  await loadProfile();
-  populateMemberView();
+  currentProfile = { ...currentProfile, ...profileData };
+  showAlert('profile-alert', 'Profile saved successfully.', 'success');
 }
 
 async function handlePasswordChange() {
