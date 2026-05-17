@@ -387,6 +387,9 @@
         <div class="nav-item active" onclick="showMemberSection('section-collection')" id="nav-collection">
           <span class="nav-icon">&#9782;</span> Collection
         </div>
+        <div class="nav-item" onclick="showMemberSection('my-collection')" id="mnav-my-collection">
+          <span class="nav-icon">&#9632;</span> MY COLLECTION
+        </div>
         <div class="nav-item" onclick="showMemberSection('section-contribute')" id="nav-contribute">
           <span class="nav-icon">+</span> Contribute
         </div>
@@ -419,6 +422,40 @@
           <div class="collection-card" style="cursor:pointer;" onclick="openCollectionModal('Family Artifacts', 'Heirlooms &amp; personal objects')"><div class="card-icon"><svg viewBox="0 0 40 40" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 33 Q14 22 20 22 Q26 22 26 33"/><path d="M12 22 Q10 14 14 10 Q18 7 20 9 Q22 7 26 10 Q30 14 28 22"/><line x1="10" y1="33" x2="30" y2="33"/></svg></div><div class="card-title">Family Artifacts</div><div class="card-count">Heirlooms &amp; personal objects</div></div>
           <div class="collection-card" style="cursor:pointer;" onclick="openCollectionModal('Family Archives', 'Documents, letters &amp; records')"><div class="card-icon"><svg viewBox="0 0 40 40" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 15 L8 33 L32 33 L32 15 L20 15 L17 9 L8 9 Z"/><line x1="14" y1="22" x2="26" y2="22"/><line x1="14" y1="27" x2="22" y2="27"/></svg></div><div class="card-title">Family Archives</div><div class="card-count">Documents, letters &amp; records</div></div>
         </div>
+      </div>
+
+      <!-- MY COLLECTION SECTION -->
+      <div id="member-my-collection" style="display:none;">
+        <div class="page-header">
+          <h1 class="page-title">My Collection</h1>
+          <p class="page-sub">All your submitted items — manage visibility and details</p>
+        </div>
+        <div id="my-collection-alert"></div>
+        <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+          <select id="my-collection-status-filter" class="form-input select-input"
+            style="max-width:180px;" onchange="renderMyCollection()">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <select id="my-collection-category-filter" class="form-input select-input"
+            style="max-width:220px;" onchange="renderMyCollection()">
+            <option value="">All Categories</option>
+            <option value="Books &amp; Manuscripts">Books &amp; Manuscripts</option>
+            <option value="Coins &amp; Currency">Coins &amp; Currency</option>
+            <option value="Fine Art &amp; Prints">Fine Art &amp; Prints</option>
+            <option value="Horology">Horology</option>
+            <option value="Maps &amp; Lithographs">Maps &amp; Lithographs</option>
+            <option value="Sports Cards &amp; Memorabilia">Sports Cards &amp; Memorabilia</option>
+            <option value="Jewelry">Jewelry</option>
+            <option value="Comics &amp; Magazines">Comics &amp; Magazines</option>
+            <option value="Photography">Photography</option>
+            <option value="Family Artifacts">Family Artifacts</option>
+            <option value="Family Archives">Family Archives</option>
+          </select>
+        </div>
+        <div id="my-collection-list"></div>
       </div>
 
       <!-- CONTRIBUTE SECTION -->
@@ -784,6 +821,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   initUploadZone();
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      if (document.getElementById('visibility-modal')?.style.display !== 'none') {
+        closeVisibilityModal();
+        return;
+      }
       if (document.getElementById('item-detail-overlay').style.display !== 'none') {
         closeItemDetail();
       } else {
@@ -1040,6 +1081,7 @@ function populateMemberView() {
   document.getElementById('profile-location').value = currentProfile.location || '';
   document.getElementById('profile-branch').value = currentProfile.family_branch || '';
   loadMyCollections();
+  loadMyCollectionItems();
 }
 
 async function handleContribute() {
@@ -1300,6 +1342,192 @@ async function handleDeleteCollection(id) {
     }
   });
   await loadMyCollections();
+}
+
+async function loadMyCollectionItems() {
+  if (!currentUser) return;
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/contributions?submitted_by=eq.${currentUser.id}&select=*,collections(name)&order=created_at.desc`, {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Accept': 'application/json'
+    }
+  });
+  window._myCollectionItems = await resp.json();
+  renderMyCollection();
+}
+
+function renderMyCollection() {
+  const items = window._myCollectionItems || [];
+  const statusFilter = document.getElementById('my-collection-status-filter')?.value || '';
+  const categoryFilter = document.getElementById('my-collection-category-filter')?.value || '';
+
+  let filtered = items;
+  if (statusFilter) filtered = filtered.filter(i => i.status === statusFilter);
+  if (categoryFilter) filtered = filtered.filter(i => i.category === categoryFilter);
+
+  const el = document.getElementById('my-collection-list');
+  if (!el) return;
+
+  if (!filtered.length) {
+    el.innerHTML = '<div style="text-align:center; padding:3rem; color:#555;">' +
+      '<p style="font-size:1rem;">No items found.</p>' +
+      '<p style="font-size:0.85rem;">Submit items using the Contribute section.</p></div>';
+    return;
+  }
+
+  el.innerHTML = filtered.map(item => {
+    const statusColors = {
+      pending: '#888', approved: '#27ae60', rejected: '#c0392b'
+    };
+    const visibilityLabels = {
+      all_members: '&#127760; All Members',
+      submitter_only: '&#128274; Only Me',
+      specific_members: '&#128101; Specific Members'
+    };
+    const hasFiles = item.file_urls && item.file_urls.length > 0;
+    return `<div style="background:#111; border:1px solid #222; border-radius:8px;
+      padding:1.25rem; margin-bottom:1rem; display:flex; gap:1rem; align-items:flex-start;">
+      <div style="width:72px; height:72px; flex-shrink:0; border-radius:6px;
+        background:#0a0a0a; border:1px solid #222; overflow:hidden;
+        display:flex; align-items:center; justify-content:center; color:#333; font-size:1.5rem;">
+        ${hasFiles
+          ? `<img src="${item.file_urls[item.primary_image_index || 0]}"
+               style="width:100%; height:100%; object-fit:cover;"
+               onerror="this.parentElement.innerHTML='&#9723;'">`
+          : '&#9723;'}
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div style="display:flex; justify-content:space-between;
+          align-items:flex-start; gap:0.5rem; flex-wrap:wrap;">
+          <h4 style="margin:0 0 0.25rem; font-size:0.95rem; color:#e8e0d0;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+            max-width:400px;">${item.title}</h4>
+          <span style="font-size:0.75rem; color:${statusColors[item.status] || '#888'};
+            border:1px solid ${statusColors[item.status] || '#888'};
+            padding:0.15rem 0.5rem; border-radius:3px; white-space:nowrap; flex-shrink:0;">
+            ${(item.status || 'pending').toUpperCase()}
+          </span>
+        </div>
+        <p style="margin:0 0 0.5rem; font-size:0.8rem; color:#666;">
+          ${item.category || ''}
+          ${item.collection_name ? ' · <span style="color:#c0392b;">' + item.collection_name + '</span>' : ''}
+          ${item.psa_cert_number ? ' · PSA #' + item.psa_cert_number : ''}
+        </p>
+        <p style="margin:0 0 0.75rem; font-size:0.78rem; color:#555;">
+          Submitted ${new Date(item.created_at).toLocaleDateString()}
+          ${hasFiles ? ' · ' + item.file_urls.length + ' file(s)' : ''}
+        </p>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button onclick="openItemDetail(window._myCollectionItems.find(i=>i.id==='${item.id}'))"
+            style="font-size:0.75rem; padding:0.3rem 0.75rem; background:none;
+            border:1px solid #444; color:#aaa; border-radius:4px; cursor:pointer;">
+            View / Edit
+          </button>
+          <button onclick="openVisibilityModal('${item.id}')"
+            style="font-size:0.75rem; padding:0.3rem 0.75rem; background:none;
+            border:1px solid #444; color:#aaa; border-radius:4px; cursor:pointer;">
+            ${visibilityLabels[item.visibility || 'all_members']}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let _visibilityItemId = null;
+
+async function openVisibilityModal(itemId) {
+  _visibilityItemId = itemId;
+  const item = (window._myCollectionItems || []).find(i => i.id === itemId);
+  if (!item) return;
+
+  document.getElementById('visibility-item-title').textContent = item.title;
+
+  const radios = document.querySelectorAll('input[name="visibility-choice"]');
+  radios.forEach(r => { r.checked = r.value === (item.visibility || 'all_members'); });
+
+  const picker = document.getElementById('member-picker');
+  picker.style.display = item.visibility === 'specific_members' ? 'block' : 'none';
+
+  radios.forEach(r => r.addEventListener('change', () => {
+    if (r.checked) {
+      document.getElementById('member-picker').style.display =
+        r.value === 'specific_members' ? 'block' : 'none';
+    }
+  }));
+
+  const membersResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,email&access_level=neq.pending&order=full_name.asc`, {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Accept': 'application/json'
+    }
+  });
+  const members = (await membersResp.json()).filter(m => m.id !== currentUser.id);
+  const visibleTo = item.visible_to || [];
+
+  document.getElementById('member-picker-list').innerHTML = members.length
+    ? members.map(m =>
+        `<label style="display:flex; align-items:center; gap:0.5rem;
+          padding:0.4rem 0.25rem; cursor:pointer; font-size:0.85rem; color:#ccc;">
+          <input type="checkbox" value="${m.id}"
+            ${visibleTo.includes(m.id) ? 'checked' : ''}>
+          ${m.full_name || m.email}
+        </label>`
+      ).join('')
+    : '<p style="font-size:0.8rem; color:#555; margin:0;">No other members yet.</p>';
+
+  document.getElementById('visibility-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeVisibilityModal() {
+  document.getElementById('visibility-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _visibilityItemId = null;
+}
+
+async function saveVisibility() {
+  if (!_visibilityItemId) return;
+  const visibility = document.querySelector('input[name="visibility-choice"]:checked')?.value;
+  if (!visibility) return showAlert('visibility-alert', 'Please select a visibility option.', 'error');
+
+  let visible_to = [];
+  if (visibility === 'specific_members') {
+    const checked = document.querySelectorAll('#member-picker-list input[type=checkbox]:checked');
+    visible_to = Array.from(checked).map(c => c.value);
+    if (!visible_to.length) {
+      return showAlert('visibility-alert', 'Please select at least one member.', 'error');
+    }
+  }
+
+  setLoading('save-visibility-btn', true);
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/contributions?id=eq.${_visibilityItemId}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ visibility, visible_to })
+  });
+  setLoading('save-visibility-btn', false);
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    return showAlert('visibility-alert', err.message || 'Save failed.', 'error');
+  }
+
+  const item = (window._myCollectionItems || []).find(i => i.id === _visibilityItemId);
+  if (item) { item.visibility = visibility; item.visible_to = visible_to; }
+
+  closeVisibilityModal();
+  renderMyCollection();
 }
 
 // ================================================
@@ -1658,14 +1886,24 @@ function showPanel(id) {
 }
 
 function showMemberSection(id) {
-  ['section-collection','section-contribute','section-profile'].forEach(s => {
+  const sectionToEl = {
+    'section-collection': 'section-collection',
+    'section-contribute': 'section-contribute',
+    'section-profile': 'section-profile',
+    'my-collection': 'member-my-collection'
+  };
+  const targetEl = sectionToEl[id] || id;
+  Object.values(sectionToEl).forEach(s => {
     const el = document.getElementById(s);
-    if (el) el.style.display = s === id ? 'block' : 'none';
+    if (el) el.style.display = s === targetEl ? 'block' : 'none';
   });
-  ['nav-collection','nav-contribute','nav-profile'].forEach(n => {
+  ['nav-collection','nav-contribute','nav-profile','mnav-my-collection'].forEach(n => {
     const el = document.getElementById(n);
-    if (el) el.classList.toggle('active', n === 'nav-' + id.replace('section-',''));
+    if (el) el.classList.toggle('active',
+      n === 'nav-' + id.replace('section-','') || n === 'mnav-' + id
+    );
   });
+  if (id === 'my-collection') loadMyCollectionItems();
 }
 
 function showAdminSection(id) {
@@ -2205,6 +2443,71 @@ async function saveItemEdit() {
           Cancel
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div id="visibility-modal" style="display:none; position:fixed; top:0; left:0;
+  width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:1200;
+  overflow-y:auto;">
+  <div style="max-width:560px; margin:4rem auto; padding:2rem;
+    background:#111; border:1px solid #222; border-radius:8px;">
+    <div style="display:flex; justify-content:space-between;
+      align-items:center; margin-bottom:1.5rem;">
+      <h3 style="margin:0; font-size:1.1rem; color:#e8e0d0;">Manage Visibility</h3>
+      <button onclick="closeVisibilityModal()" style="background:none; border:none;
+        color:#888; cursor:pointer; font-size:1.2rem;">&#x2715;</button>
+    </div>
+    <p id="visibility-item-title" style="margin:0 0 1.5rem; font-size:0.85rem;
+      color:#888; font-style:italic;"></p>
+
+    <div style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.5rem;">
+      <label style="display:flex; align-items:flex-start; gap:0.75rem;
+        cursor:pointer; padding:0.75rem; border:1px solid #333; border-radius:6px;">
+        <input type="radio" name="visibility-choice" value="all_members"
+          style="margin-top:0.2rem; flex-shrink:0;">
+        <div>
+          <div style="font-size:0.9rem; color:#e8e0d0;">All Family Portal Members</div>
+          <div style="font-size:0.75rem; color:#666; margin-top:0.2rem;">
+            Visible to everyone with portal access (after admin approval)
+          </div>
+        </div>
+      </label>
+      <label style="display:flex; align-items:flex-start; gap:0.75rem;
+        cursor:pointer; padding:0.75rem; border:1px solid #333; border-radius:6px;">
+        <input type="radio" name="visibility-choice" value="submitter_only"
+          style="margin-top:0.2rem; flex-shrink:0;">
+        <div>
+          <div style="font-size:0.9rem; color:#e8e0d0;">Only Me</div>
+          <div style="font-size:0.75rem; color:#666; margin-top:0.2rem;">
+            Private — only you can see this item
+          </div>
+        </div>
+      </label>
+      <label style="display:flex; align-items:flex-start; gap:0.75rem;
+        cursor:pointer; padding:0.75rem; border:1px solid #333; border-radius:6px;">
+        <input type="radio" name="visibility-choice" value="specific_members"
+          style="margin-top:0.2rem; flex-shrink:0;">
+        <div style="width:100%;">
+          <div style="font-size:0.9rem; color:#e8e0d0;">Specific Family Members</div>
+          <div style="font-size:0.75rem; color:#666; margin-top:0.2rem;">
+            Choose which members can see this item
+          </div>
+          <div id="member-picker" style="display:none; margin-top:0.75rem;">
+            <div id="member-picker-list" style="max-height:200px; overflow-y:auto;
+              border:1px solid #333; border-radius:4px; padding:0.5rem;"></div>
+          </div>
+        </div>
+      </label>
+    </div>
+
+    <div id="visibility-alert" style="margin-bottom:1rem;"></div>
+    <div style="display:flex; gap:0.75rem;">
+      <button onclick="saveVisibility()" class="btn-primary"
+        id="save-visibility-btn" data-label="Save">Save</button>
+      <button onclick="closeVisibilityModal()" style="background:none;
+        border:1px solid #555; color:#888; padding:0.75rem 1.5rem;
+        border-radius:4px; cursor:pointer;">Cancel</button>
     </div>
   </div>
 </div>
