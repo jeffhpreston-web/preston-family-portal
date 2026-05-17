@@ -419,6 +419,9 @@
         <div class="nav-item" onclick="showMemberSection('my-collection')" id="mnav-my-collection">
           <span class="nav-icon">&#9632;</span> MY COLLECTION
         </div>
+        <div class="nav-item" onclick="showMemberSection('member-directory')" id="mnav-member-directory">
+          <span class="nav-icon">&#9786;</span> MEMBER DIRECTORY
+        </div>
         <div class="nav-item" onclick="showMemberSection('section-contribute')" id="nav-contribute">
           <span class="nav-icon">+</span> Contribute
         </div>
@@ -485,6 +488,22 @@
           </select>
         </div>
         <div id="my-collection-list"></div>
+      </div>
+
+      <!-- MEMBER DIRECTORY SECTION -->
+      <div id="member-member-directory" style="display:none;">
+        <div class="page-header">
+          <h1 class="page-title">Member Directory</h1>
+          <p class="page-sub">Browse the Preston family</p>
+        </div>
+        <div id="directory-alert"></div>
+        <div style="margin-bottom:1.5rem;">
+          <input type="text" id="directory-search" class="form-input"
+            placeholder="Search by name or location..." oninput="filterDirectory()"
+            style="max-width:400px; width:100%;">
+        </div>
+        <div id="directory-stats" style="display:flex; gap:1.5rem; margin-bottom:1.5rem; flex-wrap:wrap;"></div>
+        <div id="directory-list"></div>
       </div>
 
       <!-- CONTRIBUTE SECTION -->
@@ -824,6 +843,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   initUploadZone();
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      if (document.getElementById('member-profile-overlay')?.style.display !== 'none') {
+        closeMemberProfile(); return;
+      }
       if (document.getElementById('visibility-modal')?.style.display !== 'none') {
         closeVisibilityModal();
         return;
@@ -930,6 +952,12 @@ async function handleLogin() {
     console.log('Login: currentUser =', currentUser?.id, currentUser?.email);
     console.log('Login: currentProfile =', JSON.stringify(currentProfile));
     logActivity('login', 'auth', null, { email });
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentUser.id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ last_seen: new Date().toISOString() })
+    }).catch(() => {});
     routeUser();
   } catch (err) {
     setLoading('login-btn', false);
@@ -973,6 +1001,12 @@ async function handleAdminLogin() {
     setLoading('admin-login-btn', false);
     showView('view-admin');
     loadAdminData();
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentUser.id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ last_seen: new Date().toISOString() })
+    }).catch(() => {});
   } catch (err) {
     setLoading('admin-login-btn', false);
     showAlert('admin-alert', err.message, 'error');
@@ -1826,6 +1860,147 @@ function renderMyCollection() {
   }).join('');
 }
 
+let _directoryMembers = [];
+
+async function loadMemberDirectory() {
+  try {
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?access_level=neq.pending&select=*&order=full_name.asc`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${window._accessToken}`,
+          'Accept': 'application/json'
+        }
+      }
+    );
+    if (!resp.ok) throw new Error('Failed to load members');
+    _directoryMembers = await resp.json();
+    renderDirectoryStats();
+    renderDirectory(_directoryMembers);
+  } catch (err) {
+    showAlert('directory-alert', err.message, 'error');
+  }
+}
+
+function isVisible(member, field) {
+  if (currentProfile?.access_level === 'admin') return true;
+  if (member.id === currentUser?.id) return true;
+  const vis = member.profile_visibility || {};
+  return (vis[field] || 'only_me') === 'all_members';
+}
+
+function renderDirectoryStats() {
+  const total = _directoryMembers.length;
+  const el = document.getElementById('directory-stats');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="background:#1a1a1a; border:1px solid #333; border-radius:6px;
+      padding:0.75rem 1.25rem; text-align:center;">
+      <div style="font-size:1.4rem; color:#c0392b; font-weight:600;">${total}</div>
+      <div style="font-size:0.75rem; color:#666; text-transform:uppercase;
+        letter-spacing:0.05em;">Members</div>
+    </div>`;
+}
+
+function filterDirectory() {
+  const q = (document.getElementById('directory-search')?.value || '').toLowerCase();
+  if (!q) { renderDirectory(_directoryMembers); return; }
+  const filtered = _directoryMembers.filter(m => {
+    const name = (m.full_name || '').toLowerCase();
+    const loc = (m.location || '').toLowerCase();
+    return name.includes(q) || loc.includes(q);
+  });
+  renderDirectory(filtered);
+}
+
+function renderDirectory(members) {
+  const el = document.getElementById('directory-list');
+  if (!el) return;
+  if (!members.length) {
+    el.innerHTML = '<p style="color:#666; text-align:center; padding:2rem;">No members found.</p>';
+    return;
+  }
+  el.innerHTML = members.map(m => {
+    const name = m.full_name || m.email || 'Unknown';
+    const initial = name[0].toUpperCase();
+    const loc = isVisible(m, 'location') && m.location ? m.location : '';
+    const branch = isVisible(m, 'family_branch') && m.family_branch ? m.family_branch : '';
+    const level = (m.access_level || '').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const lastSeen = m.last_seen ? new Date(m.last_seen).toLocaleDateString() : '';
+    return `<div onclick="openMemberProfile('${m.id}')" style="display:flex; align-items:center;
+      gap:1rem; padding:0.875rem 1rem; border-bottom:1px solid #222; cursor:pointer;
+      transition:background 0.15s;" onmouseover="this.style.background='#1a1a1a'"
+      onmouseout="this.style.background='transparent'">
+      <div style="width:42px; height:42px; border-radius:50%; background:#2a2a2a;
+        border:1px solid #333; display:flex; align-items:center; justify-content:center;
+        font-size:1rem; color:#c0392b; flex-shrink:0;">${initial}</div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:0.9rem; color:#e8e0d0;">${name}</div>
+        ${loc || branch ? `<div style="font-size:0.75rem; color:#666; margin-top:0.1rem;">${[loc, branch].filter(Boolean).join(' · ')}</div>` : ''}
+      </div>
+      <div style="text-align:right; flex-shrink:0;">
+        <div style="font-size:0.7rem; color:#c0392b;">${level}</div>
+        ${lastSeen ? `<div style="font-size:0.65rem; color:#444; margin-top:0.1rem;">Seen ${lastSeen}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openMemberProfile(memberId) {
+  const m = _directoryMembers.find(x => x.id === memberId);
+  if (!m) return;
+  const name = m.full_name || m.email || 'Unknown';
+  document.getElementById('mp-initial').textContent = name[0].toUpperCase();
+  document.getElementById('mp-name').textContent = name;
+  document.getElementById('mp-member-id').textContent = m.member_id || '';
+  document.getElementById('mp-badge').textContent =
+    (m.access_level || '').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const fields = [
+    { key: 'location', label: 'Location' },
+    { key: 'generation', label: 'Generation' },
+    { key: 'family_branch', label: 'Family Branch' },
+    { key: 'email_primary', label: 'Email' },
+    { key: 'phone_primary', label: 'Phone' },
+    { key: 'whatsapp', label: 'WhatsApp' },
+    { key: 'instagram_url', label: 'Instagram' },
+    { key: 'facebook_url', label: 'Facebook' },
+    { key: 'x_handle', label: 'X / Twitter' },
+    { key: 'father_name', label: 'Father' },
+    { key: 'mother_name', label: 'Mother' },
+    { key: 'spouse_name', label: 'Spouse' }
+  ];
+
+  const rows = fields
+    .filter(f => isVisible(m, f.key) && m[f.key])
+    .map(f => `<div style="display:flex; justify-content:space-between; padding:0.5rem 0;
+      border-bottom:1px solid #222;">
+      <span style="font-size:0.75rem; color:#666; text-transform:uppercase;
+        letter-spacing:0.04em;">${f.label}</span>
+      <span style="font-size:0.85rem; color:#e8e0d0;">${m[f.key]}</span>
+    </div>`);
+
+  if (isVisible(m, 'children_names') && m.children_names?.length) {
+    rows.push(`<div style="display:flex; justify-content:space-between; padding:0.5rem 0;
+      border-bottom:1px solid #222;">
+      <span style="font-size:0.75rem; color:#666; text-transform:uppercase;
+        letter-spacing:0.04em;">Children</span>
+      <span style="font-size:0.85rem; color:#e8e0d0;">${m.children_names.join(', ')}</span>
+    </div>`);
+  }
+
+  document.getElementById('mp-fields').innerHTML = rows.length
+    ? rows.join('')
+    : '<p style="color:#666; font-size:0.85rem; text-align:center; padding:1rem;">No shared information.</p>';
+
+  document.getElementById('member-profile-overlay').style.display = 'block';
+}
+
+function closeMemberProfile() {
+  document.getElementById('member-profile-overlay').style.display = 'none';
+}
+
 let _visibilityItemId = null;
 
 async function openVisibilityModal(itemId) {
@@ -2280,20 +2455,22 @@ function showMemberSection(id) {
     'section-collection': 'section-collection',
     'section-contribute': 'section-contribute',
     'section-profile': 'section-profile',
-    'my-collection': 'member-my-collection'
+    'my-collection': 'member-my-collection',
+    'member-directory': 'member-member-directory'
   };
   const targetEl = sectionToEl[id] || id;
   Object.values(sectionToEl).forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = s === targetEl ? 'block' : 'none';
   });
-  ['nav-collection','nav-contribute','nav-profile','mnav-my-collection'].forEach(n => {
+  ['nav-collection','nav-contribute','nav-profile','mnav-my-collection','mnav-member-directory'].forEach(n => {
     const el = document.getElementById(n);
     if (el) el.classList.toggle('active',
       n === 'nav-' + id.replace('section-','') || n === 'mnav-' + id
     );
   });
   if (id === 'my-collection') loadMyCollectionItems();
+  if (id === 'member-directory') loadMemberDirectory();
 }
 
 function showAdminSection(id) {
@@ -2899,6 +3076,27 @@ async function saveItemEdit() {
         border:1px solid #555; color:#888; padding:0.75rem 1.5rem;
         border-radius:4px; cursor:pointer;">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- MEMBER PROFILE OVERLAY -->
+<div id="member-profile-overlay" style="display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.85); z-index:200; overflow-y:auto;">
+  <div style="max-width:560px; margin:3rem auto; background:#1a1a1a;
+    border:1px solid #333; border-radius:8px; padding:2rem; position:relative;">
+    <button onclick="closeMemberProfile()" style="position:absolute; top:1rem; right:1rem;
+      background:none; border:none; color:#666; font-size:1.2rem; cursor:pointer;">&#x2715;</button>
+    <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+      <div style="width:56px; height:56px; border-radius:50%; background:#2a2a2a;
+        border:1px solid #333; display:flex; align-items:center; justify-content:center;
+        font-size:1.5rem; color:#c0392b; flex-shrink:0;" id="mp-initial"></div>
+      <div>
+        <div style="font-size:1.2rem; color:#e8e0d0; font-weight:600;" id="mp-name"></div>
+        <div style="font-size:0.8rem; color:#666;" id="mp-member-id"></div>
+        <div style="font-size:0.75rem; color:#c0392b; margin-top:0.25rem;" id="mp-badge"></div>
+      </div>
+    </div>
+    <div id="mp-fields"></div>
   </div>
 </div>
 </body>
