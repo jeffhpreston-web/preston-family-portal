@@ -422,6 +422,9 @@
         <div class="nav-item" onclick="showMemberSection('member-directory')" id="mnav-member-directory">
           <span class="nav-icon">&#9786;</span> MEMBER DIRECTORY
         </div>
+        <div class="nav-item" onclick="showMemberSection('historical-locations')" id="mnav-historical-locations">
+          <span class="nav-icon">&#9873;</span> HISTORICAL LOCATIONS
+        </div>
         <div class="nav-item" onclick="showMemberSection('section-contribute')" id="nav-contribute">
           <span class="nav-icon">+</span> Contribute
         </div>
@@ -504,6 +507,44 @@
         </div>
         <div id="directory-stats" style="display:flex; gap:1.5rem; margin-bottom:1.5rem; flex-wrap:wrap;"></div>
         <div id="directory-list"></div>
+      </div>
+
+      <!-- HISTORICAL LOCATIONS SECTION -->
+      <div id="member-historical-locations" style="display:none;">
+        <div class="page-header" style="display:flex; justify-content:space-between;
+          align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <h1 class="page-title">Historical Family Locations</h1>
+            <p class="page-sub">Places of significance to the Preston family history</p>
+          </div>
+          <button onclick="openLocationForm()" class="btn-primary"
+            style="padding:0.6rem 1.25rem; font-size:0.85rem;">
+            + Add Location
+          </button>
+        </div>
+
+        <!-- Filters -->
+        <div style="display:flex; gap:0.75rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+          <input type="text" id="location-search" class="form-input"
+            placeholder="Search locations..." oninput="filterLocations()"
+            style="max-width:260px;">
+          <select id="location-type-filter" class="form-input select-input"
+            style="max-width:200px;" onchange="filterLocations()">
+            <option value="">All Types</option>
+            <option value="family_residence">Family Residences</option>
+            <option value="historical_event">Historical Events</option>
+            <option value="both">Both</option>
+          </select>
+          <select id="location-country-filter" class="form-input select-input"
+            style="max-width:200px;" onchange="filterLocations()">
+            <option value="">All Countries</option>
+          </select>
+        </div>
+
+        <div id="locations-grid" style="display:grid;
+          grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+          gap:1.25rem;">
+        </div>
       </div>
 
       <!-- CONTRIBUTE SECTION -->
@@ -843,6 +884,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   initUploadZone();
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      if (document.getElementById('location-form-overlay')?.style.display !== 'none') {
+        closeLocationForm(); return;
+      }
+      if (document.getElementById('location-detail-overlay')?.style.display !== 'none') {
+        closeLocationDetail(); return;
+      }
       if (document.getElementById('member-profile-overlay')?.style.display !== 'none') {
         closeMemberProfile(); return;
       }
@@ -2001,6 +2048,671 @@ function closeMemberProfile() {
   document.getElementById('member-profile-overlay').style.display = 'none';
 }
 
+// ================================================
+// HISTORICAL LOCATIONS
+// ================================================
+let _locations = [];
+let _currentLocation = null;
+
+async function loadHistoricalLocations() {
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/historical_locations?select=*&order=created_at.desc`, {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Accept': 'application/json'
+    }
+  });
+  _locations = (await resp.json()) || [];
+
+  const countries = [...new Set(_locations.map(l => l.country).filter(Boolean))].sort();
+  const countryFilter = document.getElementById('location-country-filter');
+  if (countryFilter) {
+    countryFilter.innerHTML = '<option value="">All Countries</option>' +
+      countries.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  renderLocations(_locations);
+}
+
+function filterLocations() {
+  const q = (document.getElementById('location-search')?.value || '').toLowerCase();
+  const type = document.getElementById('location-type-filter')?.value || '';
+  const country = document.getElementById('location-country-filter')?.value || '';
+
+  let filtered = _locations;
+  if (q) filtered = filtered.filter(l =>
+    (l.title||'').toLowerCase().includes(q) ||
+    (l.historic_name||'').toLowerCase().includes(q) ||
+    (l.town_city||'').toLowerCase().includes(q) ||
+    (l.country||'').toLowerCase().includes(q) ||
+    (l.surname_tags||[]).some(t => t.toLowerCase().includes(q))
+  );
+  if (type) filtered = filtered.filter(l => l.location_type === type);
+  if (country) filtered = filtered.filter(l => l.country === country);
+  renderLocations(filtered);
+}
+
+function renderLocations(locations) {
+  const el = document.getElementById('locations-grid');
+  if (!el) return;
+  if (!locations.length) {
+    el.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:#555;">' +
+      '<p>No locations found.</p>' +
+      '<p style="font-size:0.85rem;">Click &ldquo;+ Add Location&rdquo; to add the first one.</p></div>';
+    return;
+  }
+
+  el.innerHTML = locations.map(loc => {
+    const typeLabel = {
+      family_residence: 'Family Residence',
+      historical_event: 'Historical Event',
+      both: 'Residence & Event'
+    }[loc.location_type] || '';
+    const typeColor = loc.location_type === 'family_residence' ? '#8e44ad' :
+                      loc.location_type === 'historical_event' ? '#c0392b' : '#2980b9';
+    const locationStr = [loc.town_city, loc.state_province, loc.country]
+      .filter(Boolean).join(', ');
+    const hasImage = loc.file_urls && loc.file_urls.length > 0;
+
+    return `<div onclick="openLocationDetail('${loc.id}')"
+      style="background:#111; border:1px solid #1a1a1a; border-radius:8px;
+      overflow:hidden; cursor:pointer; transition:border-color 0.2s;"
+      onmouseover="this.style.borderColor='#333'"
+      onmouseout="this.style.borderColor='#1a1a1a'">
+
+      <div style="height:160px; background:#0a0a0a; overflow:hidden;
+        display:flex; align-items:center; justify-content:center;
+        color:#222; font-size:3rem;">
+        ${hasImage
+          ? `<img src="${loc.file_urls[loc.primary_image_index||0]}"
+               style="width:100%; height:100%; object-fit:cover;"
+               onerror="this.parentElement.innerHTML='&#9873;'">`
+          : '&#9873;'}
+      </div>
+
+      <div style="padding:1rem;">
+        <div style="display:flex; justify-content:space-between;
+          align-items:flex-start; margin-bottom:0.5rem;">
+          <span style="font-size:0.7rem; color:${typeColor};
+            border:1px solid ${typeColor}; padding:0.15rem 0.5rem;
+            border-radius:3px;">${typeLabel}</span>
+        </div>
+        <h3 style="margin:0 0 0.25rem; font-size:0.95rem;
+          color:#e8e0d0;">${loc.title}</h3>
+        ${loc.historic_name
+          ? `<p style="margin:0 0 0.4rem; font-size:0.8rem;
+               color:#666; font-style:italic;">${loc.historic_name}</p>`
+          : ''}
+        <p style="margin:0 0 0.75rem; font-size:0.78rem; color:#555;">
+          &#128205; ${locationStr || 'Location not specified'}
+        </p>
+        ${loc.surname_tags?.length
+          ? `<div style="display:flex; gap:0.3rem; flex-wrap:wrap;">
+               ${loc.surname_tags.slice(0,3).map(t =>
+                 `<span style="font-size:0.65rem; padding:0.15rem 0.4rem;
+                   background:#1a1a1a; color:#888; border-radius:3px;">${t}</span>`
+               ).join('')}
+               ${loc.surname_tags.length > 3
+                 ? `<span style="font-size:0.65rem; color:#555;">+${loc.surname_tags.length-3} more</span>`
+                 : ''}
+             </div>`
+          : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openLocationDetail(locationId) {
+  _currentLocation = _locations.find(l => l.id === locationId);
+  if (!_currentLocation) return;
+  const loc = _currentLocation;
+  const isAdmin = currentProfile?.access_level === 'admin';
+  const isOwner = loc.created_by === currentUser?.id;
+
+  // Images
+  const imgEl = document.getElementById('location-detail-images');
+  if (loc.file_urls?.length > 0) {
+    const signedUrls = await Promise.all(loc.file_urls.map(url => getSignedUrl(url)));
+    const valid = signedUrls.filter(Boolean);
+    imgEl.innerHTML = valid.length
+      ? `<div style="display:grid; grid-template-columns:repeat(auto-fill,
+           minmax(180px, 1fr)); gap:0.75rem; margin-bottom:1.5rem;">` +
+         valid.map((url, i) =>
+           `<div onclick="setLocationPrimaryImage(${i})"
+             style="height:180px; border-radius:6px; overflow:hidden;
+             background:#0a0a0a; cursor:pointer;
+             border:2px solid ${i===(loc.primary_image_index||0)?'#c0392b':'#222'};">
+             <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
+           </div>`
+         ).join('') + '</div>'
+      : '';
+  } else {
+    imgEl.innerHTML = '';
+  }
+
+  // Type badge
+  const typeLabel = {
+    family_residence: 'Family Residence',
+    historical_event: 'Historical Event',
+    both: 'Residence & Event'
+  }[loc.location_type] || '';
+  document.getElementById('location-detail-type-badge').textContent = typeLabel;
+
+  // Title & names
+  document.getElementById('location-detail-title').textContent = loc.title;
+  document.getElementById('location-detail-historic-name').textContent =
+    loc.historic_name || '';
+  const locationParts = [loc.town_city, loc.county, loc.state_province, loc.country]
+    .filter(Boolean);
+  const modernLocEl = document.getElementById('location-detail-modern-location');
+  modernLocEl.innerHTML = locationParts.length
+    ? '&#128205; ' + locationParts.join(', ')
+    : '';
+  if (loc.latitude && loc.longitude) {
+    modernLocEl.innerHTML +=
+      ` <a href="https://maps.google.com/?q=${loc.latitude},${loc.longitude}"
+         target="_blank" style="color:#c0392b; font-size:0.8rem; margin-left:0.5rem;">
+         View on Google Maps &rarr;</a>`;
+  }
+
+  // Surname tags
+  const tagsEl = document.getElementById('location-detail-surname-tags');
+  tagsEl.innerHTML = (loc.surname_tags||[]).map(t =>
+    `<span style="font-size:0.75rem; padding:0.2rem 0.6rem; background:#1a1a1a;
+      color:#888; border-radius:3px; border:1px solid #2a2a2a;">${t}</span>`
+  ).join('');
+
+  // Details body
+  const bodyEl = document.getElementById('location-detail-body');
+  let bodyHtml = '';
+
+  if (loc.location_type === 'family_residence' || loc.location_type === 'both') {
+    bodyHtml += `<div style="background:#0d0d0d; border:1px solid #1a1a1a;
+      border-radius:6px; padding:1rem; margin-bottom:1rem;">
+      <h4 style="margin:0 0 0.75rem; font-size:0.75rem; color:#8e44ad;
+        text-transform:uppercase; letter-spacing:0.08em;">Family Residence</h4>
+      ${loc.founding_year ? `<div style="display:flex; gap:1rem; margin-bottom:0.5rem;">
+        <span style="font-size:0.75rem; color:#666; min-width:140px;">Year Founded</span>
+        <span style="font-size:0.85rem; color:#ccc;">${loc.founding_year}</span>
+      </div>` : ''}
+      ${loc.founding_member ? `<div style="display:flex; gap:1rem; margin-bottom:0.5rem;">
+        <span style="font-size:0.75rem; color:#666; min-width:140px;">Founding Member</span>
+        <span style="font-size:0.85rem; color:#ccc;">${loc.founding_member}</span>
+      </div>` : ''}
+      ${loc.years_occupied ? `<div style="display:flex; gap:1rem;">
+        <span style="font-size:0.75rem; color:#666; min-width:140px;">Years Occupied</span>
+        <span style="font-size:0.85rem; color:#ccc;">${loc.years_occupied}</span>
+      </div>` : ''}
+    </div>`;
+  }
+
+  if (loc.location_type === 'historical_event' || loc.location_type === 'both') {
+    bodyHtml += `<div style="background:#0d0d0d; border:1px solid #1a1a1a;
+      border-radius:6px; padding:1rem; margin-bottom:1rem;">
+      <h4 style="margin:0 0 0.75rem; font-size:0.75rem; color:#c0392b;
+        text-transform:uppercase; letter-spacing:0.08em;">Historical Event</h4>
+      ${loc.event_name ? `<div style="display:flex; gap:1rem; margin-bottom:0.5rem;">
+        <span style="font-size:0.75rem; color:#666; min-width:140px;">Event</span>
+        <span style="font-size:0.85rem; color:#ccc;">${loc.event_name}</span>
+      </div>` : ''}
+      ${loc.event_date ? `<div style="display:flex; gap:1rem; margin-bottom:0.5rem;">
+        <span style="font-size:0.75rem; color:#666; min-width:140px;">Date</span>
+        <span style="font-size:0.85rem; color:#ccc;">${loc.event_date}</span>
+      </div>` : ''}
+      ${loc.family_members_involved?.length ? `<div style="display:flex; gap:1rem;">
+        <span style="font-size:0.75rem; color:#666; min-width:140px;">Family Members</span>
+        <span style="font-size:0.85rem; color:#ccc;">
+          ${loc.family_members_involved.join(', ')}
+        </span>
+      </div>` : ''}
+    </div>`;
+  }
+
+  bodyEl.innerHTML = bodyHtml;
+
+  // Description
+  document.getElementById('location-detail-description').textContent =
+    loc.description || 'No description provided.';
+
+  // External URLs
+  const urlsEl = document.getElementById('location-detail-urls-section');
+  if (loc.external_urls?.length) {
+    urlsEl.innerHTML = `<h3 style="margin:0 0 0.75rem; font-size:0.75rem;
+      color:#666; text-transform:uppercase; letter-spacing:0.1em;">
+      External Resources</h3>` +
+      loc.external_urls.map(url =>
+        `<div style="margin-bottom:0.4rem;">
+          <a href="${url}" target="_blank"
+            style="color:#c0392b; font-size:0.85rem; word-break:break-all;">
+            ${url}
+          </a>
+        </div>`
+      ).join('');
+  } else {
+    urlsEl.innerHTML = '';
+  }
+
+  // Edit button
+  document.getElementById('location-edit-btn').style.display =
+    (isAdmin || isOwner) ? 'block' : 'none';
+
+  // Load visits and comments
+  loadLocationVisits(locationId);
+  loadLocationComments(locationId);
+
+  document.getElementById('location-detail-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLocationDetail() {
+  document.getElementById('location-detail-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+  _currentLocation = null;
+}
+
+async function loadLocationVisits(locationId) {
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/location_visits?location_id=eq.${locationId}` +
+    `&select=*,profiles(full_name)`, {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Accept': 'application/json'
+    }
+  });
+  const visits = (await resp.json()) || [];
+  const el = document.getElementById('location-detail-visitors');
+  const visitBtn = document.getElementById('location-visit-btn');
+  const hasVisited = visits.some(v => v.user_id === currentUser?.id);
+
+  visitBtn.textContent = hasVisited ? '✓ Visited' : '📍 Mark as Visited';
+  visitBtn.style.color = hasVisited ? '#27ae60' : '#888';
+  visitBtn.style.borderColor = hasVisited ? '#27ae60' : '#555';
+
+  document.getElementById('location-detail-visited-count').textContent =
+    visits.length ? `${visits.length} member${visits.length>1?'s':''} visited` : '';
+
+  el.innerHTML = visits.length
+    ? visits.map(v =>
+        `<span style="display:inline-block; margin:0.2rem; padding:0.2rem 0.6rem;
+          background:#1a1a1a; border-radius:3px; font-size:0.8rem; color:#888;">
+          ${v.profiles?.full_name || 'Member'}
+        </span>`
+      ).join('')
+    : '<span style="color:#555; font-size:0.85rem;">No members have visited yet.</span>';
+}
+
+async function toggleLocationVisit() {
+  if (!_currentLocation) return;
+  const locationId = _currentLocation.id;
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/location_visits?location_id=eq.${locationId}` +
+    `&user_id=eq.${currentUser.id}`, {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Accept': 'application/json'
+    }
+  });
+  const existing = await resp.json();
+
+  if (existing.length > 0) {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/location_visits?location_id=eq.${locationId}` +
+      `&user_id=eq.${currentUser.id}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${window._accessToken}`
+      }
+    });
+  } else {
+    await fetch(`${SUPABASE_URL}/rest/v1/location_visits`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${window._accessToken}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ location_id: locationId, user_id: currentUser.id })
+    });
+  }
+  loadLocationVisits(locationId);
+}
+
+async function loadLocationComments(locationId) {
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/location_comments?location_id=eq.${locationId}` +
+    `&select=*,profiles(full_name)&order=created_at.asc`, {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Accept': 'application/json'
+    }
+  });
+  const comments = (await resp.json()) || [];
+  const el = document.getElementById('location-comments-list');
+  const isAdmin = currentProfile?.access_level === 'admin';
+
+  el.innerHTML = comments.length
+    ? comments.map(c => {
+        const isOwner = c.user_id === currentUser?.id;
+        return `<div style="padding:1rem; border-bottom:1px solid #1a1a1a;
+          margin-bottom:0.75rem;">
+          <div style="display:flex; justify-content:space-between;
+            align-items:flex-start; margin-bottom:0.5rem;">
+            <div>
+              <span style="font-size:0.85rem; color:#e8e0d0; font-weight:500;">
+                ${c.profiles?.full_name || 'Member'}
+              </span>
+              <span style="font-size:0.75rem; color:#555; margin-left:0.75rem;">
+                ${new Date(c.created_at).toLocaleDateString('en-US',
+                  {year:'numeric', month:'short', day:'numeric'})}
+              </span>
+            </div>
+            ${(isOwner || isAdmin)
+              ? `<button onclick="deleteLocationComment('${c.id}')"
+                   style="background:none; border:none; color:#555;
+                   cursor:pointer; font-size:0.75rem; padding:0.2rem 0.4rem;">
+                   Delete
+                 </button>`
+              : ''}
+          </div>
+          <p style="margin:0; font-size:0.875rem; color:#ccc;
+            line-height:1.6; white-space:pre-wrap;">${c.content}</p>
+          ${c.external_urls?.length
+            ? c.external_urls.map(url =>
+                `<a href="${url}" target="_blank"
+                   style="display:block; color:#c0392b; font-size:0.8rem;
+                   margin-top:0.4rem; word-break:break-all;">${url}</a>`
+              ).join('')
+            : ''}
+          ${c.file_urls?.length
+            ? `<div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap;">
+                 ${c.file_urls.map(url =>
+                   `<a href="${url}" target="_blank"
+                      style="font-size:0.75rem; color:#666;
+                      border:1px solid #333; padding:0.2rem 0.5rem;
+                      border-radius:3px;">&#128206; Attachment</a>`
+                 ).join('')}
+               </div>`
+            : ''}
+        </div>`;
+      }).join('')
+    : '<p style="color:#555; font-size:0.85rem; font-style:italic; ' +
+      'margin-bottom:1rem;">No comments yet. Be the first to add information.</p>';
+}
+
+async function submitLocationComment() {
+  if (!_currentLocation) return;
+  const content = document.getElementById('new-comment-text').value.trim();
+  if (!content) return;
+
+  setLoading('submit-comment-btn', true);
+
+  const fileInput = document.getElementById('comment-files');
+  const fileUrls = [];
+  for (const file of fileInput.files) {
+    const ext = file.name.split('.').pop();
+    const path = `${currentUser.id}/comments/${Date.now()}-${Math.random().toString(36).substring(2,6)}.${ext}`;
+    const uploadResp = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/contributions/${path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${window._accessToken}`,
+        'Content-Type': file.type || 'application/octet-stream',
+        'x-upsert': 'false'
+      },
+      body: file
+    });
+    if (uploadResp.ok) fileUrls.push(
+      `${SUPABASE_URL}/storage/v1/object/contributions/${path}`
+    );
+  }
+
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/location_comments`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      location_id: _currentLocation.id,
+      user_id: currentUser.id,
+      content,
+      file_urls: fileUrls
+    })
+  });
+
+  setLoading('submit-comment-btn', false);
+  if (resp.ok) {
+    document.getElementById('new-comment-text').value = '';
+    fileInput.value = '';
+    document.getElementById('comment-file-list').textContent = '';
+    loadLocationComments(_currentLocation.id);
+  }
+}
+
+async function deleteLocationComment(commentId) {
+  if (!confirm('Delete this comment?')) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/location_comments?id=eq.${commentId}`, {
+    method: 'DELETE',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`
+    }
+  });
+  loadLocationComments(_currentLocation.id);
+}
+
+function updateCommentFileList() {
+  const files = document.getElementById('comment-files').files;
+  document.getElementById('comment-file-list').textContent =
+    files.length ? `${files.length} file(s) selected` : '';
+}
+
+function updateLocFileList() {
+  const files = document.getElementById('loc-files').files;
+  document.getElementById('loc-file-list').innerHTML =
+    Array.from(files).map(f =>
+      `<div style="font-size:0.8rem; color:#888; padding:0.2rem 0;">&#128206; ${f.name}</div>`
+    ).join('');
+}
+
+function openLocationForm(isEdit = false) {
+  const loc = isEdit ? _currentLocation : null;
+  document.getElementById('location-form-title').textContent =
+    isEdit ? 'Edit Location' : 'Add Historical Location';
+
+  document.getElementById('loc-title').value = loc?.title || '';
+  document.getElementById('loc-historic-name').value = loc?.historic_name || '';
+  document.getElementById('loc-type').value = loc?.location_type || '';
+  document.getElementById('loc-city').value = loc?.town_city || '';
+  document.getElementById('loc-county').value = loc?.county || '';
+  document.getElementById('loc-state').value = loc?.state_province || '';
+  document.getElementById('loc-country').value = loc?.country || '';
+  document.getElementById('loc-lat').value = loc?.latitude || '';
+  document.getElementById('loc-lng').value = loc?.longitude || '';
+  document.getElementById('loc-surname-tags').value =
+    (loc?.surname_tags || []).join(', ');
+  document.getElementById('loc-description').value = loc?.description || '';
+  document.getElementById('loc-founding-year').value = loc?.founding_year || '';
+  document.getElementById('loc-founding-member').value = loc?.founding_member || '';
+  document.getElementById('loc-years-occupied').value = loc?.years_occupied || '';
+  document.getElementById('loc-event-name').value = loc?.event_name || '';
+  document.getElementById('loc-event-date').value = loc?.event_date || '';
+  document.getElementById('loc-file-list').innerHTML = '';
+
+  const eventMembersList = document.getElementById('loc-event-members-list');
+  eventMembersList.innerHTML = '';
+  (loc?.family_members_involved || []).forEach(m => addEventMember(m));
+
+  const urlsList = document.getElementById('loc-urls-list');
+  urlsList.innerHTML = '';
+  (loc?.external_urls || []).forEach(u => addExternalUrl(u));
+
+  handleLocationTypeChange();
+  document.getElementById('location-form-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLocationForm() {
+  document.getElementById('location-form-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function handleLocationTypeChange() {
+  const type = document.getElementById('loc-type').value;
+  document.getElementById('loc-residence-fields').style.display =
+    (type === 'family_residence' || type === 'both') ? 'block' : 'none';
+  document.getElementById('loc-event-fields').style.display =
+    (type === 'historical_event' || type === 'both') ? 'block' : 'none';
+}
+
+function addEventMember(value = '') {
+  const list = document.getElementById('loc-event-members-list');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex; gap:0.5rem; margin-bottom:0.5rem;';
+  div.innerHTML = `
+    <input type="text" class="form-input event-member-input"
+      value="${value}" placeholder="Family member name" style="flex:1;">
+    <button type="button" onclick="this.parentElement.remove()"
+      style="background:none; border:1px solid #444; color:#888;
+      padding:0.4rem 0.6rem; border-radius:4px; cursor:pointer;">&#x2715;</button>`;
+  list.appendChild(div);
+}
+
+function addExternalUrl(value = '') {
+  const list = document.getElementById('loc-urls-list');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex; gap:0.5rem; margin-bottom:0.5rem;';
+  div.innerHTML = `
+    <input type="url" class="form-input external-url-input"
+      value="${value}" placeholder="https://..." style="flex:1;">
+    <button type="button" onclick="this.parentElement.remove()"
+      style="background:none; border:1px solid #444; color:#888;
+      padding:0.4rem 0.6rem; border-radius:4px; cursor:pointer;">&#x2715;</button>`;
+  list.appendChild(div);
+}
+
+async function saveLocation() {
+  const title = document.getElementById('loc-title').value.trim();
+  const type = document.getElementById('loc-type').value;
+  if (!title) return showAlert('location-form-alert', 'Please enter a title.', 'error');
+  if (!type) return showAlert('location-form-alert', 'Please select a location type.', 'error');
+
+  setLoading('save-location-btn', true);
+
+  const fileInput = document.getElementById('loc-files');
+  const existingUrls = _currentLocation?.file_urls || [];
+  const fileUrls = [...existingUrls];
+  for (const file of fileInput.files) {
+    const ext = file.name.split('.').pop();
+    const path = `locations/${Date.now()}-${Math.random().toString(36).substring(2,6)}.${ext}`;
+    const uploadResp = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/contributions/${path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${window._accessToken}`,
+        'Content-Type': file.type || 'application/octet-stream',
+        'x-upsert': 'false'
+      },
+      body: file
+    });
+    if (uploadResp.ok) fileUrls.push(
+      `${SUPABASE_URL}/storage/v1/object/contributions/${path}`
+    );
+  }
+
+  const surnameTags = document.getElementById('loc-surname-tags').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const eventMembers = Array.from(
+    document.querySelectorAll('.event-member-input')
+  ).map(i => i.value.trim()).filter(Boolean);
+  const externalUrls = Array.from(
+    document.querySelectorAll('.external-url-input')
+  ).map(i => i.value.trim()).filter(Boolean);
+
+  const payload = {
+    title,
+    historic_name: document.getElementById('loc-historic-name').value.trim() || null,
+    location_type: type,
+    town_city: document.getElementById('loc-city').value.trim() || null,
+    county: document.getElementById('loc-county').value.trim() || null,
+    state_province: document.getElementById('loc-state').value.trim() || null,
+    country: document.getElementById('loc-country').value.trim() || null,
+    latitude: parseFloat(document.getElementById('loc-lat').value) || null,
+    longitude: parseFloat(document.getElementById('loc-lng').value) || null,
+    surname_tags: surnameTags,
+    description: document.getElementById('loc-description').value.trim() || null,
+    external_urls: externalUrls,
+    file_urls: fileUrls,
+    founding_year: parseInt(document.getElementById('loc-founding-year').value) || null,
+    founding_member: document.getElementById('loc-founding-member').value.trim() || null,
+    years_occupied: document.getElementById('loc-years-occupied').value.trim() || null,
+    event_name: document.getElementById('loc-event-name').value.trim() || null,
+    event_date: document.getElementById('loc-event-date').value.trim() || null,
+    family_members_involved: eventMembers,
+    updated_at: new Date().toISOString()
+  };
+
+  const isEdit = !!_currentLocation;
+  const url = isEdit
+    ? `${SUPABASE_URL}/rest/v1/historical_locations?id=eq.${_currentLocation.id}`
+    : `${SUPABASE_URL}/rest/v1/historical_locations`;
+
+  if (!isEdit) payload.created_by = currentUser.id;
+
+  const resp = await fetch(url, {
+    method: isEdit ? 'PATCH' : 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  setLoading('save-location-btn', false);
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    return showAlert('location-form-alert', err.message || 'Save failed.', 'error');
+  }
+
+  closeLocationForm();
+  const savedId = _currentLocation?.id;
+  await loadHistoricalLocations();
+  if (isEdit && savedId) {
+    _currentLocation = _locations.find(l => l.id === savedId) || null;
+    if (_currentLocation) openLocationDetail(_currentLocation.id);
+  }
+}
+
+async function setLocationPrimaryImage(index) {
+  if (!_currentLocation) return;
+  await fetch(
+    `${SUPABASE_URL}/rest/v1/historical_locations?id=eq.${_currentLocation.id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${window._accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ primary_image_index: index })
+  });
+  _currentLocation.primary_image_index = index;
+  openLocationDetail(_currentLocation.id);
+}
+
 let _visibilityItemId = null;
 
 async function openVisibilityModal(itemId) {
@@ -2456,14 +3168,15 @@ function showMemberSection(id) {
     'section-contribute': 'section-contribute',
     'section-profile': 'section-profile',
     'my-collection': 'member-my-collection',
-    'member-directory': 'member-member-directory'
+    'member-directory': 'member-member-directory',
+    'historical-locations': 'member-historical-locations'
   };
   const targetEl = sectionToEl[id] || id;
   Object.values(sectionToEl).forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = s === targetEl ? 'block' : 'none';
   });
-  ['nav-collection','nav-contribute','nav-profile','mnav-my-collection','mnav-member-directory'].forEach(n => {
+  ['nav-collection','nav-contribute','nav-profile','mnav-my-collection','mnav-member-directory','mnav-historical-locations'].forEach(n => {
     const el = document.getElementById(n);
     if (el) el.classList.toggle('active',
       n === 'nav-' + id.replace('section-','') || n === 'mnav-' + id
@@ -2471,6 +3184,7 @@ function showMemberSection(id) {
   });
   if (id === 'my-collection') loadMyCollectionItems();
   if (id === 'member-directory') loadMemberDirectory();
+  if (id === 'historical-locations') loadHistoricalLocations();
 }
 
 function showAdminSection(id) {
@@ -3073,6 +3787,293 @@ async function saveItemEdit() {
       <button onclick="saveVisibility()" class="btn-primary"
         id="save-visibility-btn" data-label="Save">Save</button>
       <button onclick="closeVisibilityModal()" style="background:none;
+        border:1px solid #555; color:#888; padding:0.75rem 1.5rem;
+        border-radius:4px; cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOCATION DETAIL OVERLAY -->
+<div id="location-detail-overlay" style="display:none; position:fixed;
+  top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.96);
+  z-index:1200; overflow-y:auto;">
+  <div style="max-width:800px; margin:0 auto; padding:2rem;">
+
+    <div style="display:flex; justify-content:space-between;
+      align-items:center; margin-bottom:1.5rem;">
+      <button onclick="closeLocationDetail()" style="background:none;
+        border:1px solid #555; color:#888; padding:0.4rem 0.9rem;
+        border-radius:4px; cursor:pointer; font-size:0.85rem;">
+        &larr; Back
+      </button>
+      <div style="display:flex; gap:0.5rem;">
+        <button id="location-visit-btn" onclick="toggleLocationVisit()"
+          style="background:none; border:1px solid #555; color:#888;
+          padding:0.4rem 0.9rem; border-radius:4px; cursor:pointer;
+          font-size:0.85rem;">
+          &#128205; Mark as Visited
+        </button>
+        <button id="location-edit-btn" onclick="openLocationForm(true)"
+          style="display:none; background:none; border:1px solid #555;
+          color:#888; padding:0.4rem 0.9rem; border-radius:4px;
+          cursor:pointer; font-size:0.85rem;">
+          &#x270F; Edit
+        </button>
+      </div>
+    </div>
+
+    <div id="location-detail-images" style="margin-bottom:1.5rem;"></div>
+
+    <div style="margin-bottom:1.5rem; padding-bottom:1.5rem;
+      border-bottom:1px solid #222;">
+      <div style="display:flex; gap:0.75rem; align-items:center;
+        flex-wrap:wrap; margin-bottom:0.5rem;">
+        <span id="location-detail-type-badge" style="font-size:0.7rem;
+          padding:0.2rem 0.6rem; border-radius:3px; border:1px solid #c0392b;
+          color:#c0392b; text-transform:uppercase; letter-spacing:0.06em;">
+        </span>
+        <span id="location-detail-visited-count" style="font-size:0.75rem;
+          color:#666;"></span>
+      </div>
+      <h2 id="location-detail-title" style="margin:0 0 0.25rem;
+        font-size:1.6rem; color:#e8e0d0;"></h2>
+      <p id="location-detail-historic-name" style="margin:0 0 0.5rem;
+        font-size:0.9rem; color:#888; font-style:italic;"></p>
+      <p id="location-detail-modern-location" style="margin:0 0 0.75rem;
+        font-size:0.85rem; color:#666;"></p>
+      <div id="location-detail-surname-tags" style="display:flex;
+        gap:0.4rem; flex-wrap:wrap;"></div>
+    </div>
+
+    <div id="location-detail-body" style="margin-bottom:2rem;"></div>
+
+    <div id="location-detail-description-section" style="margin-bottom:2rem;">
+      <h3 style="margin:0 0 0.75rem; font-size:0.75rem; color:#666;
+        text-transform:uppercase; letter-spacing:0.1em;">Description</h3>
+      <p id="location-detail-description" style="margin:0; color:#ccc;
+        font-size:0.9rem; line-height:1.7;"></p>
+    </div>
+
+    <div id="location-detail-urls-section" style="margin-bottom:2rem;"></div>
+
+    <div style="margin-bottom:2rem;">
+      <h3 style="margin:0 0 0.75rem; font-size:0.75rem; color:#666;
+        text-transform:uppercase; letter-spacing:0.1em;">
+        Members Who Have Visited
+      </h3>
+      <div id="location-detail-visitors" style="font-size:0.85rem;
+        color:#666; font-style:italic;">Loading...</div>
+    </div>
+
+    <div>
+      <h3 style="margin:0 0 1rem; font-size:0.75rem; color:#666;
+        text-transform:uppercase; letter-spacing:0.1em;">
+        Comments &amp; Additional Information
+      </h3>
+      <div id="location-comments-list" style="margin-bottom:1.5rem;"></div>
+
+      <div style="background:#0d0d0d; border:1px solid #222;
+        border-radius:8px; padding:1.25rem;">
+        <textarea id="new-comment-text" class="form-input" rows="3"
+          placeholder="Share information, links, documents, or your experience visiting this location..."
+          style="resize:vertical; margin-bottom:0.75rem;"></textarea>
+        <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+          <button onclick="submitLocationComment()" class="btn-primary"
+            id="submit-comment-btn" data-label="Post Comment"
+            style="padding:0.6rem 1.25rem; font-size:0.85rem;">
+            Post Comment
+          </button>
+          <label style="font-size:0.8rem; color:#666; cursor:pointer;">
+            <input type="file" id="comment-files" multiple
+              accept="image/*,.pdf" style="display:none"
+              onchange="updateCommentFileList()">
+            <span onclick="document.getElementById('comment-files').click()"
+              style="border:1px solid #444; padding:0.4rem 0.75rem;
+              border-radius:4px; color:#888; cursor:pointer;">&#128206; Attach Files</span>
+          </label>
+          <span id="comment-file-list" style="font-size:0.75rem; color:#666;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOCATION FORM OVERLAY -->
+<div id="location-form-overlay" style="display:none; position:fixed;
+  top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.96);
+  z-index:1300; overflow-y:auto;">
+  <div style="max-width:720px; margin:0 auto; padding:2rem;">
+
+    <div style="display:flex; justify-content:space-between;
+      align-items:center; margin-bottom:2rem;">
+      <h2 id="location-form-title" style="margin:0; font-size:1.3rem;
+        color:#e8e0d0;">Add Historical Location</h2>
+      <button onclick="closeLocationForm()" style="background:none;
+        border:none; color:#888; cursor:pointer; font-size:1.2rem;">&#x2715;</button>
+    </div>
+
+    <div id="location-form-alert" style="margin-bottom:1rem;"></div>
+
+    <h3 style="margin:0 0 1rem; font-size:0.75rem; color:#666;
+      text-transform:uppercase; letter-spacing:0.1em;">Basic Information</h3>
+
+    <div class="form-group">
+      <label class="form-label">Title *</label>
+      <input type="text" id="loc-title" class="form-input"
+        placeholder="e.g. Preston Manor, Battle of Hayes Station">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Historic Location Name</label>
+      <input type="text" id="loc-historic-name" class="form-input"
+        placeholder="Original or historic name of this place">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Location Type *</label>
+      <select id="loc-type" class="form-input select-input"
+        onchange="handleLocationTypeChange()">
+        <option value="">&mdash; Select type &mdash;</option>
+        <option value="family_residence">Family Residence</option>
+        <option value="historical_event">Historical Event</option>
+        <option value="both">Both</option>
+      </select>
+    </div>
+
+    <div id="loc-residence-fields" style="display:none;
+      background:#0d0d0d; border:1px solid #1a1a1a; border-radius:6px;
+      padding:1rem; margin-bottom:1rem;">
+      <h4 style="margin:0 0 0.75rem; font-size:0.8rem; color:#888;">
+        Family Residence Details
+      </h4>
+      <div class="form-group">
+        <label class="form-label">Year Founded</label>
+        <input type="text" id="loc-founding-year" class="form-input"
+          placeholder="e.g. 1742">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Founding Family Member</label>
+        <input type="text" id="loc-founding-member" class="form-input"
+          placeholder="Full name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Years Occupied by Family</label>
+        <input type="text" id="loc-years-occupied" class="form-input"
+          placeholder="e.g. 1742&ndash;1891 or 1742&ndash;present">
+      </div>
+    </div>
+
+    <div id="loc-event-fields" style="display:none;
+      background:#0d0d0d; border:1px solid #1a1a1a; border-radius:6px;
+      padding:1rem; margin-bottom:1rem;">
+      <h4 style="margin:0 0 0.75rem; font-size:0.8rem; color:#888;">
+        Historical Event Details
+      </h4>
+      <div class="form-group">
+        <label class="form-label">Event Name</label>
+        <input type="text" id="loc-event-name" class="form-input"
+          placeholder="e.g. Battle of Hayes Station">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date of Event</label>
+        <input type="text" id="loc-event-date" class="form-input"
+          placeholder="e.g. November 19, 1781">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Family Members Involved</label>
+        <div id="loc-event-members-list"></div>
+        <button type="button" onclick="addEventMember()"
+          style="background:none; border:1px dashed #444; color:#888;
+          padding:0.4rem 0.75rem; border-radius:4px; cursor:pointer;
+          font-size:0.8rem; margin-top:0.5rem;">
+          + Add Family Member
+        </button>
+      </div>
+    </div>
+
+    <h3 style="margin:1.5rem 0 1rem; font-size:0.75rem; color:#666;
+      text-transform:uppercase; letter-spacing:0.1em;">Modern Location</h3>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+      <div class="form-group">
+        <label class="form-label">Town / City</label>
+        <input type="text" id="loc-city" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">County</label>
+        <input type="text" id="loc-county" class="form-input">
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+      <div class="form-group">
+        <label class="form-label">State / Province</label>
+        <input type="text" id="loc-state" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Country</label>
+        <input type="text" id="loc-country" class="form-input">
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+      <div class="form-group">
+        <label class="form-label">Latitude</label>
+        <input type="number" id="loc-lat" class="form-input"
+          step="0.0000001" placeholder="e.g. 37.4316">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Longitude</label>
+        <input type="number" id="loc-lng" class="form-input"
+          step="0.0000001" placeholder="e.g. -78.6569">
+      </div>
+    </div>
+
+    <h3 style="margin:1.5rem 0 1rem; font-size:0.75rem; color:#666;
+      text-transform:uppercase; letter-spacing:0.1em;">Tags &amp; Links</h3>
+
+    <div class="form-group">
+      <label class="form-label">Family Surname Tags</label>
+      <input type="text" id="loc-surname-tags" class="form-input"
+        placeholder="Preston, Hancock, Smith (comma-separated)">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">External URLs</label>
+      <div id="loc-urls-list"></div>
+      <button type="button" onclick="addExternalUrl()"
+        style="background:none; border:1px dashed #444; color:#888;
+        padding:0.4rem 0.75rem; border-radius:4px; cursor:pointer;
+        font-size:0.8rem; margin-top:0.5rem;">
+        + Add URL
+      </button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea id="loc-description" class="form-input" rows="5"
+        placeholder="Historical context, significance to the family, notable events..."
+        style="resize:vertical;"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Photos &amp; Documents</label>
+      <div id="loc-upload-zone" style="border:2px dashed #555;
+        border-radius:8px; padding:1.5rem; text-align:center;
+        cursor:pointer;" onclick="document.getElementById('loc-files').click()">
+        <p style="margin:0; font-size:0.85rem; color:#888;">
+          Click to upload photos, maps, or documents
+        </p>
+        <input type="file" id="loc-files" multiple
+          accept="image/*,.pdf" style="display:none"
+          onchange="updateLocFileList()">
+      </div>
+      <div id="loc-file-list" style="margin-top:0.5rem;"></div>
+    </div>
+
+    <div style="display:flex; gap:0.75rem; margin-top:1.5rem;">
+      <button onclick="saveLocation()" class="btn-primary"
+        id="save-location-btn" data-label="Save Location">
+        Save Location
+      </button>
+      <button onclick="closeLocationForm()" style="background:none;
         border:1px solid #555; color:#888; padding:0.75rem 1.5rem;
         border-radius:4px; cursor:pointer;">Cancel</button>
     </div>
