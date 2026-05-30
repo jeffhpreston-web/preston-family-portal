@@ -62,7 +62,7 @@ exports.handler = async (event) => {
     if (rows.length > 0) {
       // Upsert applications
       const upsertResp = await fetch(
-        `${SUPABASE_URL}/rest/v1/registry_applications`,
+        `${SUPABASE_URL}/rest/v1/registry_applications?on_conflict=formspree_id`,
         {
           method: 'POST',
           headers: {
