@@ -35,8 +35,14 @@ exports.handler = async (event) => {
     const submissions = fsData.submissions || [];
 
     // Map Formspree fields → registry_applications columns
-    const rows = submissions.map((s) => ({
-      formspree_id: s.id || s._id,
+    const rows = submissions.map((s) => {
+      // Derive a stable unique ID — try native fields first, then hash email+date
+      const nativeId = s.id || s._id || s.uid || s.submission_id;
+      const fallbackId = nativeId || Buffer.from(
+        (s.email || s.Email || '') + '|' + (s._date || s.date || s.Date || '')
+      ).toString('base64').replace(/[^a-zA-Z0-9]/g, '').substring(0, 40);
+      return {
+      formspree_id: fallbackId,
       first_name: s.first_name || s['First Name'] || null,
       last_name: s.last_name || s['Last Name'] || null,
       email: s.email || s.Email || null,
@@ -49,8 +55,9 @@ exports.handler = async (event) => {
         s.newsletter === 'yes' ||
         s.Newsletter === 'true' ||
         false,
-      submitted_at: s._date || null,
-    }));
+      submitted_at: s._date || s.date || s.Date || null,
+      };
+    });
 
     if (rows.length > 0) {
       // Upsert applications
