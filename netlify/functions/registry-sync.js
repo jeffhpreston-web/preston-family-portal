@@ -36,7 +36,7 @@ exports.handler = async (event) => {
 
     // Map Formspree fields → registry_applications columns
     const rows = submissions.map((s) => ({
-      formspree_id: s._id,
+      formspree_id: s.id || s._id,
       first_name: s.first_name || s['First Name'] || null,
       last_name: s.last_name || s['Last Name'] || null,
       email: s.email || s.Email || null,
