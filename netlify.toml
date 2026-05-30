@@ -6,3 +6,13 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# Required environment variables — set these in the Netlify dashboard
+# Site settings → Environment variables → Add variable
+#
+#   SUPABASE_URL              = https://jkmqyncnkyglymvspnmk.supabase.co
+#   SUPABASE_SERVICE_ROLE_KEY = (your Supabase service role key)
+#   PORTAL_SECRET             = (a random string you generate — e.g. openssl rand -hex 32)
+#   FORMSPREE_MASTER_KEY      = (your Formspree API key)
+[context.production.environment]
+  SUPABASE_URL = "https://jkmqyncnkyglymvspnmk.supabase.co"

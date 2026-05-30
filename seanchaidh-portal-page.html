@@ -1,0 +1,231 @@
+<!-- wp:html -->
+<style>
+#cpr-wrap *{box-sizing:border-box;margin:0;padding:0}
+#cpr-wrap{font-family:'Segoe UI',Arial,sans-serif;background:#0d0d0d;color:#e0e0e0;padding:24px;border-radius:4px;min-height:300px}
+.cpr-header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2a2a2a;padding-bottom:16px;margin-bottom:24px}
+.cpr-title{font-family:Georgia,serif;font-size:22px;color:#b8972a;letter-spacing:.08em}
+.cpr-subtitle{font-size:11px;color:#888;letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
+.cpr-btn{background:#1a1a1a;border:1px solid #333;color:#b8972a;padding:8px 16px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.cpr-btn:hover{background:#b8972a;color:#000;border-color:#b8972a}
+.cpr-btn:disabled{opacity:.4;cursor:not-allowed}
+.cpr-stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.cpr-stat{background:#161616;border:1px solid #2a2a2a;padding:12px 20px;text-align:center;min-width:80px}
+.cpr-stat-n{font-family:Georgia,serif;font-size:28px;color:#b8972a}
+.cpr-stat-l{font-size:9px;color:#888;letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
+.cpr-tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid #2a2a2a}
+.cpr-tab{padding:8px 20px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:#888;border-bottom:2px solid transparent;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+.cpr-tab:hover{color:#e0e0e0}
+.cpr-tab.active{color:#b8972a;border-bottom-color:#b8972a}
+.cpr-table-wrap{overflow-x:auto}
+table.cpr-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.cpr-tbl th{text-align:left;padding:10px 12px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#888;border-bottom:1px solid #2a2a2a;font-weight:normal;background:#0d0d0d}
+.cpr-tbl td{padding:10px 12px;border-bottom:1px solid #1a1a1a;vertical-align:top}
+.cpr-tbl tr:hover td{background:rgba(184,151,42,.04)}
+.cpr-name{font-size:14px;color:#e0e0e0}
+.cpr-email{font-size:11px;color:#888;margin-top:2px}
+.cpr-connection{font-size:11px;color:#aaa;max-width:180px;word-break:break-word}
+.cpr-date{font-size:11px;color:#666}
+.cpr-badge{display:inline-block;padding:2px 8px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;border:1px solid;border-radius:2px}
+.cpr-badge-new{color:#888;border-color:#333;background:rgba(128,128,128,.1)}
+.cpr-badge-review{color:#b8972a;border-color:rgba(184,151,42,.4);background:rgba(184,151,42,.1)}
+.cpr-badge-approved{color:#4caf50;border-color:rgba(76,175,80,.4);background:rgba(76,175,80,.1)}
+.cpr-badge-denied{color:#e74c3c;border-color:rgba(231,76,60,.4);background:rgba(231,76,60,.1)}
+.cpr-action-row{display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap}
+.cpr-select{background:#1a1a1a;border:1px solid #333;color:#e0e0e0;padding:5px 8px;font-size:11px;font-family:inherit;outline:none}
+.cpr-input{background:#1a1a1a;border:1px solid #333;color:#e0e0e0;padding:5px 8px;font-size:11px;font-family:inherit;outline:none;width:100px}
+.cpr-notes-input{background:#1a1a1a;border:1px solid #333;color:#e0e0e0;padding:5px 8px;font-size:11px;font-family:inherit;outline:none;width:150px;min-height:52px;resize:vertical}
+.cpr-save-btn{background:rgba(184,151,42,.15);border:1px solid rgba(184,151,42,.4);color:#b8972a;padding:5px 12px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:all .2s}
+.cpr-save-btn:hover{background:#b8972a;color:#000}
+.cpr-save-btn.saved{background:rgba(76,175,80,.15);border-color:rgba(76,175,80,.4);color:#4caf50}
+.cpr-email-btn{background:rgba(100,149,237,.1);border:1px solid rgba(100,149,237,.3);color:#6495ed;padding:5px 10px;font-size:10px;letter-spacing:.05em;cursor:pointer;font-family:inherit;transition:all .2s;text-decoration:none;display:inline-block}
+.cpr-email-btn:hover{background:rgba(100,149,237,.2)}
+.cpr-status-msg{padding:24px;text-align:center;color:#888;font-size:13px;letter-spacing:.1em}
+.cpr-error-msg{background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:12px 16px;margin-bottom:16px;font-size:12px;border-radius:2px}
+.cpr-success-msg{background:rgba(184,151,42,.1);border:1px solid rgba(184,151,42,.3);color:#b8972a;padding:12px 16px;margin-bottom:16px;font-size:12px;border-radius:2px}
+.cpr-spinner{display:inline-block;width:14px;height:14px;border:2px solid #333;border-top-color:#b8972a;border-radius:50%;animation:cpr-spin .8s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes cpr-spin{to{transform:rotate(360deg)}}
+.cpr-empty{padding:48px;text-align:center;color:#555;font-size:13px}
+.cpr-lineage{font-size:11px;color:#666;max-width:160px;word-break:break-word;font-style:italic}
+</style>
+
+<div id="cpr-wrap">
+  <div class="cpr-header">
+    <div>
+      <div class="cpr-title">Seanchaidh Registry Portal</div>
+      <div class="cpr-subtitle">Clan Preston &middot; Registry Applications</div>
+    </div>
+    <button class="cpr-btn" id="cpr-refresh-btn" onclick="cprRefresh()">&#8635; Sync Formspree</button>
+  </div>
+  <div id="cpr-alert"></div>
+  <div id="cpr-stats" class="cpr-stats" style="display:none">
+    <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-total">0</div><div class="cpr-stat-l">Total</div></div>
+    <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-new">0</div><div class="cpr-stat-l">New</div></div>
+    <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-review">0</div><div class="cpr-stat-l">Review</div></div>
+    <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-approved">0</div><div class="cpr-stat-l">Approved</div></div>
+    <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-denied">0</div><div class="cpr-stat-l">Denied</div></div>
+  </div>
+  <div class="cpr-tabs">
+    <button class="cpr-tab active" data-filter="all" onclick="cprFilter('all')">All</button>
+    <button class="cpr-tab" data-filter="new" onclick="cprFilter('new')">New</button>
+    <button class="cpr-tab" data-filter="review" onclick="cprFilter('review')">Review</button>
+    <button class="cpr-tab" data-filter="approved" onclick="cprFilter('approved')">Approved</button>
+    <button class="cpr-tab" data-filter="denied" onclick="cprFilter('denied')">Denied</button>
+  </div>
+  <div id="cpr-body"><div class="cpr-status-msg"><span class="cpr-spinner"></span>Loading registry&hellip;</div></div>
+</div>
+
+<script>
+(function(){
+const NETLIFY_BASE='https://vermillion-bonbon-d04317.netlify.app';
+/* IMPORTANT: replace the value below with the PORTAL_SECRET you set in Netlify env vars */
+const SECRET='__REPLACE_WITH_PORTAL_SECRET__';
+const CACHE_KEY='cp_registry_v2';
+let _all=[];
+let _filter='all';
+
+function cprGetStatus(app){
+  const d=app.registry_decisions;
+  const dec=Array.isArray(d)?d[0]:d;
+  return dec&&dec.status?dec.status:'new';
+}
+
+async function cprLoad(){
+  const btn=document.getElementById('cpr-refresh-btn');
+  if(btn){btn.disabled=true;btn.textContent='Syncing…';}
+  cprSetAlert('');
+  try{
+    const resp=await fetch(NETLIFY_BASE+'/.netlify/functions/registry-sync',{
+      method:'GET',headers:{'x-portal-secret':SECRET}
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Sync failed ('+resp.status+')');
+    _all=data.applications||[];
+    localStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),apps:_all}));
+    cprRender();
+    if(data.synced>0)cprSetAlert('Synced '+data.synced+' new submission(s) from Formspree.','success');
+  }catch(e){
+    const cached=cprLoadCache();
+    if(cached){
+      _all=cached;cprRender();
+      cprSetAlert('Live sync failed — showing cached data. ('+e.message+')','error');
+    }else{
+      document.getElementById('cpr-body').innerHTML='<div class="cpr-error-msg">Failed to load registry: '+escHtml(e.message)+'</div>';
+    }
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='↻ Sync Formspree';}
+  }
+}
+
+function cprLoadCache(){
+  try{const r=localStorage.getItem(CACHE_KEY);if(!r)return null;return JSON.parse(r).apps||null;}catch{return null;}
+}
+
+function cprRender(){
+  const filtered=_filter==='all'?_all:_all.filter(a=>cprGetStatus(a)===_filter);
+  const counts={total:_all.length,new:0,review:0,approved:0,denied:0};
+  _all.forEach(a=>{const s=cprGetStatus(a);if(counts[s]!==undefined)counts[s]++;});
+  const stats=document.getElementById('cpr-stats');
+  if(stats){
+    stats.style.display='flex';
+    ['total','new','review','approved','denied'].forEach(k=>{
+      const el=document.getElementById('cpr-s-'+k);if(el)el.textContent=counts[k];
+    });
+  }
+  const body=document.getElementById('cpr-body');
+  if(!filtered.length){
+    body.innerHTML='<div class="cpr-empty">No applications'+((_filter!=='all')?' with status "'+_filter+'"':'')+' yet.</div>';
+    return;
+  }
+  const rows=filtered.map(app=>{
+    const d=app.registry_decisions;
+    const dec=Array.isArray(d)?d[0]:(d||{});
+    const status=dec.status||'new';
+    const regNum=dec.registry_number||'';
+    const notes=dec.notes||'';
+    const name=[app.first_name,app.last_name].filter(Boolean).join(' ')||'&mdash;';
+    const submitted=app.submitted_at?new Date(app.submitted_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}):'&mdash;';
+    const subj=encodeURIComponent('Clan Preston Registry — Application Update');
+    const bodyLines=['Dear '+(app.first_name||'Applicant')+',','','Thank you for your application to the Clan Preston Registry.','','Status: '+status.toUpperCase()+(regNum?'\nRegistry Number: '+regNum:'')+(notes?'\n\nNotes: '+notes:''),'','C\xECs ar sliochd Phreasdan!','','The Seanchaidh\nClan Preston'];
+    const mailHref='mailto:'+encodeURIComponent(app.email||'')+'?subject='+subj+'&body='+encodeURIComponent(bodyLines.join('\n'));
+    return '<tr>'+
+      '<td><div class="cpr-name">'+name+'</div><div class="cpr-email">'+escHtml(app.email||'')+'</div>'+(app.newsletter?'<div style="font-size:9px;color:#b8972a;margin-top:2px;letter-spacing:.1em">NEWSLETTER</div>':'')+'</td>'+
+      '<td><div class="cpr-connection">'+escHtml(app.country||'&mdash;')+'</div></td>'+
+      '<td><div class="cpr-connection">'+escHtml((app.connection||'').substring(0,120))+'</div>'+(app.lineage_notes?'<div class="cpr-lineage">'+escHtml(app.lineage_notes.substring(0,80))+'</div>':'')+'</td>'+
+      '<td class="cpr-date">'+submitted+'</td>'+
+      '<td><span class="cpr-badge cpr-badge-'+status+'">'+status+'</span></td>'+
+      '<td>'+
+        '<div class="cpr-action-row">'+
+          '<select class="cpr-select" id="sel-'+app.id+'" onchange="cprMarkDirty(\''+app.id+'\')">'+
+            '<option value="new"'+(status==='new'?' selected':'')+'>New</option>'+
+            '<option value="review"'+(status==='review'?' selected':'')+'>Review</option>'+
+            '<option value="approved"'+(status==='approved'?' selected':'')+'>Approved</option>'+
+            '<option value="denied"'+(status==='denied'?' selected':'')+'>Denied</option>'+
+          '</select>'+
+          '<input class="cpr-input" id="reg-'+app.id+'" placeholder="Reg #" value="'+escHtml(regNum)+'" oninput="cprMarkDirty(\''+app.id+'\')" title="Registry number">'+
+        '</div>'+
+        '<div style="margin-top:6px"><textarea class="cpr-notes-input" id="notes-'+app.id+'" placeholder="Notes…" oninput="cprMarkDirty(\''+app.id+'\')">'+escHtml(notes)+'</textarea></div>'+
+        '<div style="margin-top:6px;display:flex;gap:6px;align-items:center">'+
+          '<button class="cpr-save-btn" id="save-'+app.id+'" onclick="cprSave(\''+app.id+'\')">Save</button>'+
+          '<a class="cpr-email-btn" href="'+mailHref+'" target="_blank">✉ Draft Email</a>'+
+        '</div>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+  body.innerHTML='<div class="cpr-table-wrap"><table class="cpr-tbl"><thead><tr><th>Applicant</th><th>Country</th><th>Connection / Lineage</th><th>Submitted</th><th>Status</th><th style="min-width:260px">Actions</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+function cprMarkDirty(id){
+  const b=document.getElementById('save-'+id);
+  if(b){b.textContent='Save';b.className='cpr-save-btn';}
+}
+
+async function cprSave(appId){
+  const btn=document.getElementById('save-'+appId);
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  const status=document.getElementById('sel-'+appId)?.value;
+  const registry_number=document.getElementById('reg-'+appId)?.value.trim()||null;
+  const notes=document.getElementById('notes-'+appId)?.value.trim()||null;
+  try{
+    const resp=await fetch(NETLIFY_BASE+'/.netlify/functions/registry-update',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-portal-secret':SECRET},
+      body:JSON.stringify({application_id:appId,status,registry_number,notes})
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Update failed');
+    const app=_all.find(a=>a.id===appId);
+    if(app)app.registry_decisions=[data.decision];
+    localStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),apps:_all}));
+    if(btn){btn.disabled=false;btn.textContent='✓ Saved';btn.className='cpr-save-btn saved';}
+    setTimeout(()=>{if(btn){btn.textContent='Save';btn.className='cpr-save-btn';}},2500);
+    cprRender();
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='Save';}
+    cprSetAlert('Save failed: '+e.message,'error');
+  }
+}
+
+function cprFilter(f){
+  _filter=f;
+  document.querySelectorAll('.cpr-tab').forEach(t=>t.classList.toggle('active',t.dataset.filter===f));
+  cprRender();
+}
+
+function cprSetAlert(msg,type){
+  const el=document.getElementById('cpr-alert');if(!el)return;
+  if(!msg){el.innerHTML='';return;}
+  el.innerHTML='<div class="cpr-'+(type||'error')+'-msg">'+escHtml(msg)+'</div>';
+  if(type==='success')setTimeout(()=>{el.innerHTML='';},5000);
+}
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+window.cprRefresh=function(){cprLoad();};
+window.cprFilter=cprFilter;
+window.cprSave=cprSave;
+window.cprMarkDirty=cprMarkDirty;
+
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',cprLoad);}else{cprLoad();}
+})();
+</script>
+<!-- /wp:html -->
