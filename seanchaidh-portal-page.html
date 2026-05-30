@@ -138,7 +138,7 @@ function cprRender(){
   }
   const rows=filtered.map(app=>{
     const d=app.registry_decisions;
-    const dec=Array.isArray(d)?d[0]:(d||{});
+    const dec=Array.isArray(d)?(d[0]||{}):(d||{});
     const status=dec.status||'new';
     const regNum=dec.registry_number||'';
     const notes=dec.notes||'';
