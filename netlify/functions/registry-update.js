@@ -68,7 +68,7 @@ exports.handler = async (event) => {
     };
 
     const upsertResp = await fetch(
-      `${SUPABASE_URL}/rest/v1/registry_decisions`,
+      `${SUPABASE_URL}/rest/v1/registry_decisions?on_conflict=application_id`,
       {
         method: 'POST',
         headers: {
