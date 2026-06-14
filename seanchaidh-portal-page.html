@@ -2,7 +2,7 @@
 <style>
 #cpr-wrap *{box-sizing:border-box;margin:0;padding:0}
 #cpr-wrap{font-family:'Segoe UI',Arial,sans-serif;background:#0d0d0d;color:#e0e0e0;padding:24px;border-radius:4px;min-height:300px}
-.cpr-header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2a2a2a;padding-bottom:16px;margin-bottom:24px}
+.cpr-header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2a2a2a;padding-bottom:16px;margin-bottom:0}
 .cpr-title{font-family:Georgia,serif;font-size:22px;color:#b8972a;letter-spacing:.08em}
 .cpr-subtitle{font-size:11px;color:#888;letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
 .cpr-btn{background:#1a1a1a;border:1px solid #333;color:#b8972a;padding:8px 16px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s}
@@ -12,6 +12,10 @@
 .cpr-stat{background:#161616;border:1px solid #2a2a2a;padding:12px 20px;text-align:center;min-width:80px}
 .cpr-stat-n{font-family:Georgia,serif;font-size:28px;color:#b8972a}
 .cpr-stat-l{font-size:9px;color:#888;letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
+.cpr-section-tabs{display:flex;gap:0;border-bottom:2px solid #2a2a2a;margin-bottom:0}
+.cpr-section-tab{padding:10px 24px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;color:#666;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit;transition:all .2s}
+.cpr-section-tab:hover{color:#e0e0e0}
+.cpr-section-tab.active{color:#b8972a;border-bottom-color:#b8972a}
 .cpr-tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid #2a2a2a}
 .cpr-tab{padding:8px 20px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:#888;border-bottom:2px solid transparent;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
 .cpr-tab:hover{color:#e0e0e0}
@@ -46,32 +50,108 @@ table.cpr-tbl{width:100%;border-collapse:collapse;font-size:13px}
 @keyframes cpr-spin{to{transform:rotate(360deg)}}
 .cpr-empty{padding:48px;text-align:center;color:#555;font-size:13px}
 .cpr-lineage{font-size:11px;color:#666;max-width:160px;word-break:break-word;font-style:italic}
+/* Map Location Manager */
+.cpr-map-toolbar{display:flex;justify-content:flex-end;align-items:center;margin-bottom:16px;gap:8px}
+.cpr-map-form{background:#161616;border:1px solid #2a2a2a;padding:16px;margin-bottom:20px;border-left:2px solid rgba(184,151,42,.4)}
+.cpr-form-title{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#b8972a;margin-bottom:12px}
+.cpr-form-grid{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.cpr-form-group{display:flex;flex-direction:column;gap:4px}
+.cpr-form-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#666}
+.cpr-form-input{background:#1a1a1a;border:1px solid #333;color:#e0e0e0;padding:6px 10px;font-size:12px;font-family:inherit;outline:none}
+.cpr-form-input:focus{border-color:rgba(184,151,42,.6)}
+.cpr-form-actions{display:flex;gap:8px;margin-top:12px}
+.cpr-toggle-btn{padding:3px 10px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:inherit;border-radius:2px;border:1px solid;transition:all .2s}
+.cpr-toggle-active{background:rgba(76,175,80,.15);border-color:rgba(76,175,80,.4);color:#4caf50}
+.cpr-toggle-inactive{background:rgba(128,128,128,.08);border-color:#333;color:#555}
+.cpr-order-btn{background:#1a1a1a;border:1px solid #2a2a2a;color:#666;padding:2px 7px;font-size:11px;cursor:pointer;font-family:inherit;line-height:1.4;transition:all .2s}
+.cpr-order-btn:hover:not(:disabled){color:#b8972a;border-color:rgba(184,151,42,.4)}
+.cpr-order-btn:disabled{opacity:.3;cursor:not-allowed}
+.cpr-del-btn{background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.25);color:#c0392b;padding:4px 10px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:all .2s}
+.cpr-del-btn:hover{background:rgba(231,76,60,.18);color:#e74c3c}
+.cpr-edit-row td{background:rgba(184,151,42,.04)!important}
 </style>
 
 <div id="cpr-wrap">
   <div class="cpr-header">
     <div>
-      <div class="cpr-title">Seanchaidh Registry Portal</div>
-      <div class="cpr-subtitle">Clan Preston &middot; Registry Applications</div>
+      <div class="cpr-title">Seanchaidh Portal</div>
+      <div class="cpr-subtitle" id="cpr-section-subtitle">Clan Preston &middot; Registry Applications</div>
     </div>
-    <button class="cpr-btn" id="cpr-refresh-btn" onclick="cprRefresh()">&#8635; Sync Formspree</button>
+    <div style="display:flex;gap:8px">
+      <button class="cpr-btn" id="cpr-refresh-btn" onclick="cprRefresh()">&#8635; Sync Formspree</button>
+      <button class="cpr-btn" id="cpr-map-add-btn" style="display:none" onclick="cprMapToggleForm()">+ Add Location</button>
+    </div>
   </div>
-  <div id="cpr-alert"></div>
-  <div id="cpr-stats" class="cpr-stats" style="display:none">
-    <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-total">0</div><div class="cpr-stat-l">Total</div></div>
-    <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-new">0</div><div class="cpr-stat-l">New</div></div>
-    <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-review">0</div><div class="cpr-stat-l">Review</div></div>
-    <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-approved">0</div><div class="cpr-stat-l">Approved</div></div>
-    <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-denied">0</div><div class="cpr-stat-l">Denied</div></div>
+
+  <div class="cpr-section-tabs" style="margin-top:16px">
+    <button class="cpr-section-tab active" data-sec="registry" onclick="cprSection('registry')">Registry</button>
+    <button class="cpr-section-tab" data-sec="map" onclick="cprSection('map')">Map Locations</button>
   </div>
-  <div class="cpr-tabs">
-    <button class="cpr-tab active" data-filter="all" onclick="cprFilter('all')">All</button>
-    <button class="cpr-tab" data-filter="new" onclick="cprFilter('new')">New</button>
-    <button class="cpr-tab" data-filter="review" onclick="cprFilter('review')">Review</button>
-    <button class="cpr-tab" data-filter="approved" onclick="cprFilter('approved')">Approved</button>
-    <button class="cpr-tab" data-filter="denied" onclick="cprFilter('denied')">Denied</button>
+
+  <div id="cpr-alert" style="margin-top:16px"></div>
+
+  <!-- ── Registry section ────────────────────────────────────────── -->
+  <div id="cpr-registry-section">
+    <div id="cpr-stats" class="cpr-stats" style="display:none;margin-top:20px">
+      <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-total">0</div><div class="cpr-stat-l">Total</div></div>
+      <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-new">0</div><div class="cpr-stat-l">New</div></div>
+      <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-review">0</div><div class="cpr-stat-l">Review</div></div>
+      <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-approved">0</div><div class="cpr-stat-l">Approved</div></div>
+      <div class="cpr-stat"><div class="cpr-stat-n" id="cpr-s-denied">0</div><div class="cpr-stat-l">Denied</div></div>
+    </div>
+    <div class="cpr-tabs" style="margin-top:20px">
+      <button class="cpr-tab active" data-filter="all" onclick="cprFilter('all')">All</button>
+      <button class="cpr-tab" data-filter="new" onclick="cprFilter('new')">New</button>
+      <button class="cpr-tab" data-filter="review" onclick="cprFilter('review')">Review</button>
+      <button class="cpr-tab" data-filter="approved" onclick="cprFilter('approved')">Approved</button>
+      <button class="cpr-tab" data-filter="denied" onclick="cprFilter('denied')">Denied</button>
+    </div>
+    <div id="cpr-body"><div class="cpr-status-msg"><span class="cpr-spinner"></span>Loading registry&hellip;</div></div>
   </div>
-  <div id="cpr-body"><div class="cpr-status-msg"><span class="cpr-spinner"></span>Loading registry&hellip;</div></div>
+
+  <!-- ── Map Locations section ───────────────────────────────────── -->
+  <div id="cpr-map-section" style="display:none">
+    <!-- Add / Edit form panel -->
+    <div id="cpr-map-form" class="cpr-map-form" style="display:none;margin-top:20px">
+      <div class="cpr-form-title" id="cpr-map-form-title">New Location</div>
+      <div class="cpr-form-grid">
+        <div class="cpr-form-group">
+          <label class="cpr-form-label">Name *</label>
+          <input class="cpr-form-input" id="cpr-map-f-name" placeholder="e.g. Preston Castle" style="width:200px">
+        </div>
+        <div class="cpr-form-group">
+          <label class="cpr-form-label">Category</label>
+          <input class="cpr-form-input" id="cpr-map-f-category" placeholder="e.g. Castle" style="width:140px">
+        </div>
+        <div class="cpr-form-group">
+          <label class="cpr-form-label">Latitude</label>
+          <input class="cpr-form-input" id="cpr-map-f-lat" placeholder="55.9312" style="width:110px" type="number" step="any">
+        </div>
+        <div class="cpr-form-group">
+          <label class="cpr-form-label">Longitude</label>
+          <input class="cpr-form-input" id="cpr-map-f-lng" placeholder="-2.8742" style="width:110px" type="number" step="any">
+        </div>
+        <div class="cpr-form-group">
+          <label class="cpr-form-label">Active</label>
+          <label style="display:flex;align-items:center;gap:6px;height:32px;cursor:pointer;color:#aaa;font-size:12px">
+            <input type="checkbox" id="cpr-map-f-active" checked> Show on map
+          </label>
+        </div>
+      </div>
+      <div class="cpr-form-group" style="max-width:600px">
+        <label class="cpr-form-label">Description</label>
+        <textarea class="cpr-form-input" id="cpr-map-f-desc" placeholder="Brief description of the location…" style="width:100%;min-height:60px;resize:vertical"></textarea>
+      </div>
+      <div class="cpr-form-actions">
+        <button class="cpr-save-btn" id="cpr-map-f-save-btn" onclick="cprMapFormSave()">Save Location</button>
+        <button class="cpr-save-btn" style="background:none;border-color:#333;color:#666" onclick="cprMapFormCancel()">Cancel</button>
+      </div>
+    </div>
+
+    <div id="cpr-map-body" style="margin-top:20px">
+      <div class="cpr-status-msg"><span class="cpr-spinner"></span>Loading locations&hellip;</div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -79,6 +159,34 @@ table.cpr-tbl{width:100%;border-collapse:collapse;font-size:13px}
 const NETLIFY_BASE='https://vermillion-bonbon-d04317.netlify.app';
 /* IMPORTANT: replace the value below with the PORTAL_SECRET you set in Netlify env vars */
 const SECRET='__REPLACE_WITH_PORTAL_SECRET__';
+
+// ── Shared utilities ──────────────────────────────────────────────────────────
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function cprSetAlert(msg,type){
+  const el=document.getElementById('cpr-alert');if(!el)return;
+  if(!msg){el.innerHTML='';return;}
+  el.innerHTML='<div class="cpr-'+(type||'error')+'-msg">'+escHtml(msg)+'</div>';
+  if(type==='success')setTimeout(()=>{el.innerHTML='';},4000);
+}
+
+// ── Section switcher ──────────────────────────────────────────────────────────
+
+function cprSection(sec){
+  document.querySelectorAll('.cpr-section-tab').forEach(t=>t.classList.toggle('active',t.dataset.sec===sec));
+  document.getElementById('cpr-registry-section').style.display=sec==='registry'?'':'none';
+  document.getElementById('cpr-map-section').style.display=sec==='map'?'':'none';
+  document.getElementById('cpr-refresh-btn').style.display=sec==='registry'?'':'none';
+  document.getElementById('cpr-map-add-btn').style.display=sec==='map'?'':'none';
+  const sub=document.getElementById('cpr-section-subtitle');
+  if(sub)sub.textContent=sec==='registry'?'Clan Preston · Registry Applications':'Clan Preston · Map Location Manager';
+  cprSetAlert('');
+  if(sec==='map')cprMapLoad();
+}
+
+// ── Registry ──────────────────────────────────────────────────────────────────
+
 const CACHE_KEY='cp_registry_v2';
 let _all=[];
 let _filter='all';
@@ -142,14 +250,14 @@ function cprRender(){
     const status=dec.status||'new';
     const regNum=dec.registry_number||'';
     const notes=dec.notes||'';
-    const name=[app.first_name,app.last_name].filter(Boolean).join(' ')||'&mdash;';
-    const submitted=app.submitted_at?new Date(app.submitted_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}):'&mdash;';
+    const name=[app.first_name,app.last_name].filter(Boolean).join(' ')||'—';
+    const submitted=app.submitted_at?new Date(app.submitted_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}):'—';
     const subj=encodeURIComponent('Clan Preston Registry — Application Update');
-    const bodyLines=['Dear '+(app.first_name||'Applicant')+',','','Thank you for your application to the Clan Preston Registry.','','Status: '+status.toUpperCase()+(regNum?'\nRegistry Number: '+regNum:'')+(notes?'\n\nNotes: '+notes:''),'','C\xECs ar sliochd Phreasdan!','','The Seanchaidh\nClan Preston'];
+    const bodyLines=['Dear '+(app.first_name||'Applicant')+',','','Thank you for your application to the Clan Preston Registry.','','Status: '+status.toUpperCase()+(regNum?'\nRegistry Number: '+regNum:'')+(notes?'\n\nNotes: '+notes:''),'','\xC8is ar sliochd Phreasdan!','','The Seanchaidh\nClan Preston'];
     const mailHref='mailto:'+encodeURIComponent(app.email||'')+'?subject='+subj+'&body='+encodeURIComponent(bodyLines.join('\n'));
     return '<tr>'+
       '<td><div class="cpr-name">'+name+'</div><div class="cpr-email">'+escHtml(app.email||'')+'</div>'+(app.newsletter?'<div style="font-size:9px;color:#b8972a;margin-top:2px;letter-spacing:.1em">NEWSLETTER</div>':'')+'</td>'+
-      '<td><div class="cpr-connection">'+escHtml(app.country||'&mdash;')+'</div></td>'+
+      '<td><div class="cpr-connection">'+escHtml(app.country||'—')+'</div></td>'+
       '<td><div class="cpr-connection">'+escHtml((app.connection||'').substring(0,120))+'</div>'+(app.lineage_notes?'<div class="cpr-lineage">'+escHtml(app.lineage_notes.substring(0,80))+'</div>':'')+'</td>'+
       '<td class="cpr-date">'+submitted+'</td>'+
       '<td><span class="cpr-badge cpr-badge-'+status+'">'+status+'</span></td>'+
@@ -211,19 +319,304 @@ function cprFilter(f){
   cprRender();
 }
 
-function cprSetAlert(msg,type){
-  const el=document.getElementById('cpr-alert');if(!el)return;
-  if(!msg){el.innerHTML='';return;}
-  el.innerHTML='<div class="cpr-'+(type||'error')+'-msg">'+escHtml(msg)+'</div>';
-  if(type==='success')setTimeout(()=>{el.innerHTML='';},5000);
+// ── Map Locations ─────────────────────────────────────────────────────────────
+
+const MAP_CACHE_KEY='cp_map_v1';
+let _locs=[];
+let _mapEditId=null; // id of row currently in edit mode
+let _mapFormMode=null; // 'add' | 'edit'
+let _mapFormId=null;   // id when editing existing row
+
+async function cprMapLoad(){
+  document.getElementById('cpr-map-body').innerHTML='<div class="cpr-status-msg"><span class="cpr-spinner"></span>Loading locations…</div>';
+  try{
+    const resp=await fetch(NETLIFY_BASE+'/.netlify/functions/map-locations-get',{
+      method:'GET',headers:{'x-portal-secret':SECRET}
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Load failed ('+resp.status+')');
+    _locs=data.locations||[];
+    localStorage.setItem(MAP_CACHE_KEY,JSON.stringify({ts:Date.now(),locs:_locs}));
+    cprMapRender();
+  }catch(e){
+    try{
+      const cached=JSON.parse(localStorage.getItem(MAP_CACHE_KEY)||'null');
+      if(cached&&cached.locs){
+        _locs=cached.locs;cprMapRender();
+        cprSetAlert('Live load failed — showing cached data. ('+e.message+')','error');
+        return;
+      }
+    }catch{}
+    document.getElementById('cpr-map-body').innerHTML='<div class="cpr-error-msg">Failed to load locations: '+escHtml(e.message)+'</div>';
+  }
 }
 
-function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function cprMapRender(){
+  const body=document.getElementById('cpr-map-body');
+  if(!_locs.length){
+    body.innerHTML='<div class="cpr-empty">No locations yet. Click “+ Add Location” to create one.</div>';
+    return;
+  }
+  const rows=_locs.map((loc,idx)=>{
+    if(_mapEditId===loc.id)return mapEditRow(loc,idx);
+    return mapDisplayRow(loc,idx);
+  }).join('');
+  body.innerHTML='<div class="cpr-table-wrap"><table class="cpr-tbl"><thead><tr>'+
+    '<th style="width:70px">Order</th><th>Name</th><th>Category</th>'+
+    '<th style="width:130px">Coordinates</th><th>Description</th>'+
+    '<th style="width:90px">Active</th><th style="width:120px">Actions</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+function mapDisplayRow(loc,idx){
+  const canUp=idx>0, canDown=idx<_locs.length-1;
+  const activeBtn=loc.active
+    ?'<button class="cpr-toggle-btn cpr-toggle-active" onclick="cprMapToggle(\''+loc.id+'\',false)">Active</button>'
+    :'<button class="cpr-toggle-btn cpr-toggle-inactive" onclick="cprMapToggle(\''+loc.id+'\',true)">Inactive</button>';
+  const lat=loc.lat!=null?Number(loc.lat).toFixed(4):'—';
+  const lng=loc.lng!=null?Number(loc.lng).toFixed(4):'—';
+  const desc=escHtml((loc.description||'').substring(0,80))+(loc.description&&loc.description.length>80?'…':'');
+  return '<tr>'+
+    '<td style="white-space:nowrap">'+
+      '<button class="cpr-order-btn" onclick="cprMapMove(\''+loc.id+'\',-1)"'+(canUp?'':' disabled')+'>&#9650;</button> '+
+      '<button class="cpr-order-btn" onclick="cprMapMove(\''+loc.id+'\',1)"'+(canDown?'':' disabled')+'>&#9660;</button>'+
+    '</td>'+
+    '<td><strong style="color:#e0e0e0;font-size:13px">'+escHtml(loc.name)+'</strong></td>'+
+    '<td><span style="color:#aaa;font-size:12px">'+escHtml(loc.category||'—')+'</span></td>'+
+    '<td style="font-size:11px;color:#888;font-family:monospace">'+lat+'<br>'+lng+'</td>'+
+    '<td style="font-size:11px;color:#777;max-width:200px">'+desc+'</td>'+
+    '<td>'+activeBtn+'</td>'+
+    '<td style="white-space:nowrap">'+
+      '<button class="cpr-save-btn" style="margin-right:4px" onclick="cprMapStartEdit(\''+loc.id+'\')">Edit</button>'+
+      '<button class="cpr-del-btn" onclick="cprMapDelete(\''+loc.id+'\')">Del</button>'+
+    '</td>'+
+    '</tr>';
+}
+
+function mapEditRow(loc,idx){
+  return '<tr class="cpr-edit-row">'+
+    '<td style="color:#666;font-size:12px;text-align:center">'+(idx+1)+'</td>'+
+    '<td><input class="cpr-form-input" id="map-ei-name" value="'+escHtml(loc.name)+'" placeholder="Name *" style="width:150px"></td>'+
+    '<td><input class="cpr-form-input" id="map-ei-cat" value="'+escHtml(loc.category||'')+'" placeholder="Category" style="width:110px"></td>'+
+    '<td>'+
+      '<input class="cpr-form-input" id="map-ei-lat" value="'+(loc.lat!=null?loc.lat:'')+'" placeholder="Lat" style="width:110px;margin-bottom:4px" type="number" step="any"><br>'+
+      '<input class="cpr-form-input" id="map-ei-lng" value="'+(loc.lng!=null?loc.lng:'')+'" placeholder="Lng" style="width:110px" type="number" step="any">'+
+    '</td>'+
+    '<td><textarea class="cpr-form-input" id="map-ei-desc" placeholder="Description…" style="width:100%;min-height:56px;resize:vertical">'+escHtml(loc.description||'')+'</textarea></td>'+
+    '<td><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:#aaa">'+
+      '<input type="checkbox" id="map-ei-active"'+(loc.active?' checked':'')+'>Active'+
+    '</label></td>'+
+    '<td style="white-space:nowrap">'+
+      '<button class="cpr-save-btn" id="map-ei-save" style="display:block;margin-bottom:4px" onclick="cprMapSaveEdit(\''+loc.id+'\')">Save</button>'+
+      '<button class="cpr-save-btn" style="background:none;border-color:#333;color:#666" onclick="cprMapCancelEdit()">Cancel</button>'+
+    '</td>'+
+    '</tr>';
+}
+
+function cprMapStartEdit(id){
+  _mapEditId=id;
+  // hide add form if open
+  document.getElementById('cpr-map-form').style.display='none';
+  cprMapRender();
+  setTimeout(()=>{const el=document.getElementById('map-ei-name');if(el)el.focus();},0);
+}
+
+function cprMapCancelEdit(){
+  _mapEditId=null;
+  cprMapRender();
+}
+
+async function cprMapSaveEdit(id){
+  const btn=document.getElementById('map-ei-save');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  const name=(document.getElementById('map-ei-name')?.value||'').trim();
+  if(!name){cprSetAlert('Name is required','error');if(btn){btn.disabled=false;btn.textContent='Save';}return;}
+  const loc=_locs.find(l=>l.id===id);
+  try{
+    const resp=await fetch(NETLIFY_BASE+'/.netlify/functions/map-locations-update',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-portal-secret':SECRET},
+      body:JSON.stringify({
+        action:'save',id,name,
+        description:(document.getElementById('map-ei-desc')?.value||'').trim()||null,
+        lat:document.getElementById('map-ei-lat')?.value.trim()||null,
+        lng:document.getElementById('map-ei-lng')?.value.trim()||null,
+        category:(document.getElementById('map-ei-cat')?.value||'').trim()||null,
+        display_order:loc?loc.display_order:0,
+        active:document.getElementById('map-ei-active')?.checked??true,
+      })
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Save failed');
+    const idx=_locs.findIndex(l=>l.id===id);
+    if(idx>=0)_locs[idx]=data.location;
+    localStorage.setItem(MAP_CACHE_KEY,JSON.stringify({ts:Date.now(),locs:_locs}));
+    _mapEditId=null;
+    cprMapRender();
+    cprSetAlert('"'+name+'" saved.','success');
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='Save';}
+    cprSetAlert('Save failed: '+e.message,'error');
+  }
+}
+
+async function cprMapToggle(id,newActive){
+  const loc=_locs.find(l=>l.id===id);
+  if(!loc)return;
+  const prev=loc.active;
+  loc.active=newActive;
+  cprMapRender();
+  try{
+    const resp=await fetch(NETLIFY_BASE+'/.netlify/functions/map-locations-update',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-portal-secret':SECRET},
+      body:JSON.stringify({action:'save',id,name:loc.name,description:loc.description,lat:loc.lat,lng:loc.lng,category:loc.category,display_order:loc.display_order,active:newActive})
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Toggle failed');
+    const idx=_locs.findIndex(l=>l.id===id);
+    if(idx>=0)_locs[idx]=data.location;
+    localStorage.setItem(MAP_CACHE_KEY,JSON.stringify({ts:Date.now(),locs:_locs}));
+    cprMapRender();
+  }catch(e){
+    loc.active=prev;cprMapRender();
+    cprSetAlert('Toggle failed: '+e.message,'error');
+  }
+}
+
+async function cprMapDelete(id){
+  const loc=_locs.find(l=>l.id===id);
+  const name=loc?loc.name:'this location';
+  if(!confirm('Delete "'+name+'"? This cannot be undone.'))return;
+  try{
+    const resp=await fetch(NETLIFY_BASE+'/.netlify/functions/map-locations-update',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-portal-secret':SECRET},
+      body:JSON.stringify({action:'delete',id})
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Delete failed');
+    _locs=_locs.filter(l=>l.id!==id);
+    localStorage.setItem(MAP_CACHE_KEY,JSON.stringify({ts:Date.now(),locs:_locs}));
+    cprMapRender();
+    cprSetAlert('"'+name+'" deleted.','success');
+  }catch(e){
+    cprSetAlert('Delete failed: '+e.message,'error');
+  }
+}
+
+async function cprMapMove(id,dir){
+  const idx=_locs.findIndex(l=>l.id===id);
+  const swapIdx=idx+dir;
+  if(swapIdx<0||swapIdx>=_locs.length)return;
+  const a=_locs[idx],b=_locs[swapIdx];
+  const aOld=a.display_order,bOld=b.display_order;
+  let aNew=bOld,bNew=aOld;
+  if(aNew===bNew){aNew=bOld+dir;bNew=aOld-dir;}
+  a.display_order=aNew;b.display_order=bNew;
+  _locs.sort((x,y)=>x.display_order-y.display_order);
+  cprMapRender();
+  try{
+    const resp=await fetch(NETLIFY_BASE+'/.netlify/functions/map-locations-update',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-portal-secret':SECRET},
+      body:JSON.stringify({action:'reorder',items:[{id:a.id,display_order:aNew},{id:b.id,display_order:bNew}]})
+    });
+    if(!resp.ok){const d=await resp.json();throw new Error(d.error||'Reorder failed');}
+    localStorage.setItem(MAP_CACHE_KEY,JSON.stringify({ts:Date.now(),locs:_locs}));
+  }catch(e){
+    a.display_order=aOld;b.display_order=bOld;
+    _locs.sort((x,y)=>x.display_order-y.display_order);
+    cprMapRender();
+    cprSetAlert('Reorder failed: '+e.message,'error');
+  }
+}
+
+// ── Add / Edit form panel ─────────────────────────────────────────────────────
+
+function cprMapToggleForm(){
+  const form=document.getElementById('cpr-map-form');
+  const isOpen=form.style.display!=='none';
+  if(isOpen){
+    cprMapFormCancel();
+  }else{
+    _mapFormMode='add';_mapFormId=null;
+    document.getElementById('cpr-map-form-title').textContent='New Location';
+    document.getElementById('cpr-map-f-save-btn').textContent='Save Location';
+    ['cpr-map-f-name','cpr-map-f-category','cpr-map-f-lat','cpr-map-f-lng','cpr-map-f-desc'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.value='';
+    });
+    document.getElementById('cpr-map-f-active').checked=true;
+    _mapEditId=null;
+    cprMapRender();
+    form.style.display='block';
+    setTimeout(()=>{const el=document.getElementById('cpr-map-f-name');if(el)el.focus();},0);
+  }
+}
+
+function cprMapFormCancel(){
+  document.getElementById('cpr-map-form').style.display='none';
+  _mapFormMode=null;_mapFormId=null;
+}
+
+async function cprMapFormSave(){
+  const btn=document.getElementById('cpr-map-f-save-btn');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  const name=(document.getElementById('cpr-map-f-name')?.value||'').trim();
+  if(!name){
+    cprSetAlert('Name is required','error');
+    if(btn){btn.disabled=false;btn.textContent=_mapFormMode==='edit'?'Save Changes':'Save Location';}
+    return;
+  }
+  const nextOrder=_locs.length?Math.max(..._locs.map(l=>l.display_order||0))+10:10;
+  const payload={
+    action:'save',
+    name,
+    description:(document.getElementById('cpr-map-f-desc')?.value||'').trim()||null,
+    lat:document.getElementById('cpr-map-f-lat')?.value.trim()||null,
+    lng:document.getElementById('cpr-map-f-lng')?.value.trim()||null,
+    category:(document.getElementById('cpr-map-f-category')?.value||'').trim()||null,
+    display_order:nextOrder,
+    active:document.getElementById('cpr-map-f-active')?.checked??true,
+  };
+  try{
+    const resp=await fetch(NETLIFY_BASE+'/.netlify/functions/map-locations-update',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-portal-secret':SECRET},
+      body:JSON.stringify(payload)
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Save failed');
+    _locs.push(data.location);
+    _locs.sort((a,b)=>a.display_order-b.display_order);
+    localStorage.setItem(MAP_CACHE_KEY,JSON.stringify({ts:Date.now(),locs:_locs}));
+    document.getElementById('cpr-map-form').style.display='none';
+    _mapFormMode=null;_mapFormId=null;
+    cprMapRender();
+    cprSetAlert('"'+name+'" added.','success');
+    if(btn){btn.disabled=false;btn.textContent='Save Location';}
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent=_mapFormMode==='edit'?'Save Changes':'Save Location';}
+    cprSetAlert('Save failed: '+e.message,'error');
+  }
+}
+
+// ── Expose globals ────────────────────────────────────────────────────────────
 
 window.cprRefresh=function(){cprLoad();};
 window.cprFilter=cprFilter;
 window.cprSave=cprSave;
 window.cprMarkDirty=cprMarkDirty;
+window.cprSection=cprSection;
+window.cprMapToggleForm=cprMapToggleForm;
+window.cprMapFormCancel=cprMapFormCancel;
+window.cprMapFormSave=cprMapFormSave;
+window.cprMapStartEdit=cprMapStartEdit;
+window.cprMapCancelEdit=cprMapCancelEdit;
+window.cprMapSaveEdit=cprMapSaveEdit;
+window.cprMapToggle=cprMapToggle;
+window.cprMapDelete=cprMapDelete;
+window.cprMapMove=cprMapMove;
 
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',cprLoad);}else{cprLoad();}
 })();
