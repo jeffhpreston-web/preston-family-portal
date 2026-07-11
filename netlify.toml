@@ -10,9 +10,28 @@
 # Required environment variables — set these in the Netlify dashboard
 # Site settings → Environment variables → Add variable
 #
+#   -- Registry backend (clanpreston.org) — DO NOT change; existing functions rely on these --
 #   SUPABASE_URL              = https://jkmqyncnkyglymvspnmk.supabase.co
-#   SUPABASE_SERVICE_ROLE_KEY = (your Supabase service role key)
+#   SUPABASE_SERVICE_ROLE_KEY = (registry project service role key)
 #   PORTAL_SECRET             = (a random string you generate — e.g. openssl rand -hex 32)
 #   FORMSPREE_MASTER_KEY      = (your Formspree API key)
+#   PSA_API_TOKEN             = (PSA public API token, used by psa-lookup.js)
+#
+#   -- Archive backend (member-app project witvlkcjvzxxajdwzdep) — separate, so the
+#      registry above is untouched --
+#   ARCHIVE_SUPABASE_URL      = https://witvlkcjvzxxajdwzdep.supabase.co
+#   ARCHIVE_SERVICE_ROLE_KEY  = (member-app project service role key)
+#   ARCHIVE_ANON_KEY          = (member-app project anon/public key — used to verify JWTs)
+#   ALLOWED_ORIGINS           = https://clanpreston.org,https://prestoncollection.net
 [context.production.environment]
   SUPABASE_URL = "https://jkmqyncnkyglymvspnmk.supabase.co"
+
+# ── Security headers (applied to all responses served by this site) ──────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
