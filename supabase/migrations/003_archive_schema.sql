@@ -109,6 +109,11 @@ create table if not exists public.archive_items (
   held_by         text,
   generation      int,                  -- 1 = earliest documented generation
 
+  -- Where the object physically is right now (vault, safe, on loan, office).
+  -- Intentionally NOT exposed in archive_public_items — do not broadcast the
+  -- location of valuable items to the public.
+  current_location text,
+
   -- Curation & visibility
   tags            text[] not null default '{}',
   is_public       boolean not null default false,  -- shown on public site

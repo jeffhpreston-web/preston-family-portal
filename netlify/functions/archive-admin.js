@@ -51,7 +51,7 @@ async function del(table, id) {
 const ITEM_FIELDS = [
   'accession_no', 'title', 'category_id', 'subcategory', 'short_desc', 'description',
   'maker', 'origin_country', 'date_text', 'year_from', 'year_to', 'medium', 'dimensions',
-  'weight', 'condition', 'edition_info', 'held_by', 'generation', 'tags', 'is_public',
+  'weight', 'condition', 'edition_info', 'held_by', 'generation', 'current_location', 'tags', 'is_public',
   'is_featured', 'status', 'display_order', 'acquisition_price', 'acquisition_date',
   'acquisition_source', 'estimated_value', 'currency',
 ];
