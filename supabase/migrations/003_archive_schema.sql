@@ -7,8 +7,10 @@
 -- OF RECORD and is intentionally separate from the member-contributed
 -- `contributions`/`collections` tables (those stay as-is).
 --
--- Deploy target: the member-app Supabase project (auth + storage already live
---   there). Run in the Supabase Dashboard → SQL editor.
+-- Deploy target: the MEMBER-APP Supabase project (witvlkcjvzxxajdwzdep — auth +
+--   storage already live there). Run in the Supabase Dashboard → SQL editor.
+--   The Netlify archive functions read this project via ARCHIVE_* env vars, so
+--   the clanpreston.org registry project (jkmqyncnkyglymvspnmk) is untouched.
 --
 -- Design goals
 --   1. Rich, normalized catalog records with full provenance & valuation history

@@ -79,6 +79,12 @@ All under `/api/*` (Netlify). Auth helper: `netlify/functions/_lib/auth.js`.
 issues. No static secrets in the browser. This is the pattern the existing
 registry admin functions should migrate to (see Security report).
 
+**Project isolation.** The archive functions read the member-app Supabase
+project through dedicated **`ARCHIVE_SUPABASE_URL` / `ARCHIVE_SERVICE_ROLE_KEY` /
+`ARCHIVE_ANON_KEY`** env vars. The registry functions keep their existing
+`SUPABASE_*` vars pointing at `jkmqyncnkyglymvspnmk`. The two backends never
+share configuration, so deploying the archive cannot affect clanpreston.org.
+
 ---
 
 ## 4. Designing for future API integrations

@@ -12,7 +12,7 @@
 const {
   SUPABASE_URL, json, preflight, requireAdmin, sbHeaders,
 } = require('./_lib/auth');
-const ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const ANON_KEY = process.env.ARCHIVE_ANON_KEY;
 
 const BUCKET = 'archive';
 const DOWNLOAD_TTL = 60 * 10; // 10 minutes

@@ -11,9 +11,13 @@
 // Both return { ok:true, ... } or { ok:false, response } where `response` is a
 // ready-to-return Netlify handler result.
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ANON_KEY = process.env.SUPABASE_ANON_KEY;
+// The archive lives on the MEMBER-APP Supabase project (auth + storage there),
+// which is a DIFFERENT project from the clanpreston.org registry. Use dedicated
+// ARCHIVE_* env vars so the registry functions' SUPABASE_* env is never touched
+// and the two backends can never collide.
+const SUPABASE_URL = process.env.ARCHIVE_SUPABASE_URL;
+const SERVICE_KEY = process.env.ARCHIVE_SERVICE_ROLE_KEY;
+const ANON_KEY = process.env.ARCHIVE_ANON_KEY;
 const PORTAL_SECRET = process.env.PORTAL_SECRET;
 
 // Comma-separated allowlist, e.g.
