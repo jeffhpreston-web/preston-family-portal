@@ -3839,6 +3839,7 @@ async function saveItemEdit() {
 // ARCHIVE — curated master catalogue (direct Supabase, admin JWT)
 // ================================================================
 const ARCH_BUCKET = 'archive';
+const ARCH_FN = 'https://vermillion-bonbon-d04317.netlify.app/.netlify/functions';
 function aEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function aHead(extra){return Object.assign({apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+window._accessToken,Accept:'application/json'},extra||{});}
 async function aRest(path,opts){
@@ -4116,12 +4117,31 @@ async function archAddVal(){
   document.getElementById('arch-val-form').classList.remove('on'); archLoadVal();
 }
 async function archLoadCert(){
-  const rows=await aRest(`archive_certifications?item_id=eq.${_archEditingId}`);
-  document.getElementById('arch-cert-list').innerHTML = rows.length ? rows.map(r=>
-    `<div class="arch-ev"><div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);">${aEsc(r.provider)}</div>`+
-    `<div><div style="font-size:13px;">Cert #${aEsc(r.cert_number)}</div><div style="color:var(--grey);font-size:12px;">Grade: ${aEsc(r.grade||'—')}</div></div>`+
-    `<button class="btn-sm btn-reject" onclick="archDelChild('archive_certifications','${r.id}','cert')">&times;</button></div>`).join('') :
-    '<p style="color:var(--grey);font-size:13px;">No certifications linked.</p>';
+  const rows=await aRest(`archive_certifications?item_id=eq.${_archEditingId}&select=*`);
+  document.getElementById('arch-cert-list').innerHTML = rows.length ? rows.map(r=>{
+    const ver = r.verified_at
+      ? `<span style="color:#4e9a6a;font-size:11px;">&#10003; Verified ${new Date(r.verified_at).toLocaleDateString()}</span>`
+      : '<span style="color:var(--grey);font-size:11px;">Not verified</span>';
+    return `<div class="arch-ev"><div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);">${aEsc(r.provider)}</div>`+
+    `<div><div style="font-size:13px;">Cert #${aEsc(r.cert_number)}</div>`+
+    `<div style="color:var(--grey);font-size:12px;">Grade: ${aEsc(r.grade||'—')} &nbsp; ${ver}</div></div>`+
+    `<div style="display:flex;gap:6px;">`+
+      `<button class="btn-sm btn-approve" onclick="archVerifyCert('${r.id}','${aEsc(r.provider)}','${aEsc(String(r.cert_number).replace(/'/g,"\\'"))}')">Verify</button>`+
+      `<button class="btn-sm btn-reject" onclick="archDelChild('archive_certifications','${r.id}','cert')">&times;</button></div></div>`;
+  }).join('') : '<p style="color:var(--grey);font-size:13px;">No certifications linked.</p>';
+}
+async function archVerifyCert(id,provider,cert){
+  aAlert('arch-ed-alert','Checking with '+provider+'…','info');
+  try{
+    const r=await fetch(`${ARCH_FN}/archive-verify-cert?provider=${encodeURIComponent(provider)}&cert=${encodeURIComponent(cert)}`);
+    const d=await r.json();
+    if(!d.ok){ aAlert('arch-ed-alert', d.error||'Verification unavailable.'); return; }
+    const patch={verified_at:d.verified_at, raw:d.raw};
+    if(d.grade) patch.grade=String(d.grade);
+    await aRest(`archive_certifications?id=eq.${id}`,{method:'PATCH',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(patch)});
+    aAlert('arch-ed-alert','Verified with '+provider+(d.grade?(' — grade '+d.grade):'')+(d.subject?(' ('+d.subject+')'):'')+'.','success');
+    archLoadCert();
+  }catch(e){ aAlert('arch-ed-alert','Verify failed: '+e.message); }
 }
 async function archAddCert(){
   if(archNeedSaved()) return;
