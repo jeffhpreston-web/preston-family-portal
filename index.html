@@ -888,6 +888,7 @@
           <div class="arch-tabs">
             <div class="arch-tab on" data-ap="details" onclick="archTab('details')">Details</div>
             <div class="arch-tab" data-ap="photos" onclick="archTab('photos')">Photos</div>
+            <div class="arch-tab" data-ap="documents" onclick="archTab('documents')">Documents</div>
             <div class="arch-tab" data-ap="provenance" onclick="archTab('provenance')">Provenance</div>
             <div class="arch-tab" data-ap="valuations" onclick="archTab('valuations')">Valuations</div>
             <div class="arch-tab" data-ap="certs" onclick="archTab('certs')">Certifications</div>
@@ -934,6 +935,26 @@
             </div>
             <input type="file" id="arch-photo-input" accept="image/*" style="display:none" onchange="archUploadPhoto(this.files[0])">
             <p style="color:var(--grey);font-size:12px;margin-top:10px;">Save the item first if it&rsquo;s new, then add photos.</p>
+          </div>
+
+          <div class="arch-panel" data-apanel="documents">
+            <div id="arch-doc-list"></div>
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:16px;">
+              <div class="form-group" style="margin:0;"><label class="form-label">Type</label>
+                <select class="form-input select-input" id="adoc-type" style="max-width:190px;">
+                  <option value="appraisal">Appraisal</option>
+                  <option value="provenance">Provenance record</option>
+                  <option value="certificate">Certificate</option>
+                  <option value="receipt">Receipt / invoice</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="correspondence">Correspondence</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <button class="btn-ghost" style="font-size:10px;" onclick="document.getElementById('arch-doc-input').click()">+ Upload document</button>
+              <input type="file" id="arch-doc-input" accept=".pdf,.doc,.docx,.txt,.rtf,.csv,.xls,.xlsx,image/*" style="display:none" onchange="archUploadDoc(this.files[0])">
+            </div>
+            <p style="color:var(--grey);font-size:12px;margin-top:10px;">Save the item first, then attach documents (PDF, Word, spreadsheets, images&hellip;). Documents are private to members &mdash; never shown publicly.</p>
           </div>
 
           <div class="arch-panel" data-apanel="provenance">
@@ -3899,7 +3920,7 @@ function archClearForm(){
   document.getElementById('ae-is_public').checked=false;
   document.getElementById('ae-is_featured').checked=false;
   document.getElementById('ae-status').value='active';
-  ['arch-photo-grid','arch-prov-list','arch-val-list','arch-cert-list'].forEach(id=>{const e=document.getElementById(id); if(e) e.innerHTML='';});
+  ['arch-photo-grid','arch-doc-list','arch-prov-list','arch-val-list','arch-cert-list'].forEach(id=>{const e=document.getElementById(id); if(e) e.innerHTML='';});
 }
 function archNewItem(){
   _archEditingId=null; archClearForm();
@@ -3920,7 +3941,7 @@ async function archEditItem(id){
   document.getElementById('arch-ed-sub').textContent=it.accession_no||'';
   document.getElementById('arch-del-btn').style.display='inline-block';
   archTab('details'); archMode('edit');
-  archLoadPhotos(); archLoadProv(); archLoadVal(); archLoadCert();
+  archLoadPhotos(); archLoadDocs(); archLoadProv(); archLoadVal(); archLoadCert();
 }
 function archFormToRow(){
   const row={};
@@ -4017,6 +4038,44 @@ async function archRemovePhoto(id){
   if(!confirm('Remove this photo?')) return;
   await aRest(`archive_photos?id=eq.${id}`,{method:'DELETE',headers:aHead({Prefer:'return=minimal'})});
   archLoadPhotos(); archLoadItems();
+}
+
+// ---- documents ----
+async function archLoadDocs(){
+  const el=document.getElementById('arch-doc-list');
+  let docs; try{ docs=await aRest(`archive_documents?item_id=eq.${_archEditingId}&order=created_at.desc`); }
+  catch(e){ el.innerHTML='<p style="color:var(--grey);font-size:13px;">Run migration <code>004_archive_documents.sql</code> in Supabase to enable documents.</p>'; return; }
+  el.innerHTML = docs.length ? docs.map(d=>{
+    const size=d.bytes?(d.bytes<1048576?(Math.round(d.bytes/1024)+' KB'):((d.bytes/1048576).toFixed(1)+' MB')):'';
+    const p=(d.storage_path||'').replace(/'/g,"\\'");
+    const name=aEsc(d.title||(d.storage_path||'').split('/').pop());
+    return `<div class="arch-ev" style="grid-template-columns:1fr auto auto;">`+
+      `<div><span class="etype">${aEsc(d.doc_type||'document')}</span>`+
+      `<div style="font-size:13px;">${name}</div>`+
+      `<div style="color:var(--grey);font-size:11px;">${size}</div></div>`+
+      `<button class="btn-sm btn-approve" onclick="archOpenDoc('${p}')">Open</button>`+
+      `<button class="btn-sm btn-reject" onclick="archRemoveDoc('${d.id}')">&times;</button></div>`;
+  }).join('') : '<p style="color:var(--grey);font-size:13px;">No documents attached yet.</p>';
+}
+async function archUploadDoc(file){
+  if(!file) return; if(archNeedSaved()) return;
+  const path=`documents/${_archEditingId}/${Date.now()}_${file.name.replace(/[^A-Za-z0-9._-]/g,'_')}`;
+  try{
+    const up=await fetch(`${SUPABASE_URL}/storage/v1/object/${ARCH_BUCKET}/${path}`,{method:'POST',headers:aHead({'Content-Type':file.type||'application/octet-stream','x-upsert':'true'}),body:file});
+    if(!up.ok) throw new Error(await up.text());
+    await aRest('archive_documents',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify({item_id:_archEditingId,storage_path:path,title:file.name,doc_type:document.getElementById('adoc-type').value,bytes:file.size,content_type:file.type,created_by:currentUser.id})});
+    document.getElementById('arch-doc-input').value='';
+    archLoadDocs();
+  }catch(e){ aAlert('arch-ed-alert','Document upload failed: '+e.message); }
+}
+async function archOpenDoc(path){
+  const url=await archSignedUrl(path);
+  if(url) window.open(url,'_blank'); else aAlert('arch-ed-alert','Could not open document.');
+}
+async function archRemoveDoc(id){
+  if(!confirm('Remove this document?')) return;
+  await aRest(`archive_documents?id=eq.${id}`,{method:'DELETE',headers:aHead({Prefer:'return=minimal'})});
+  archLoadDocs();
 }
 
 async function archLoadProv(){
