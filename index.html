@@ -703,6 +703,9 @@
         <div class="nav-item" onclick="showAdminSection('admin-contributions')" id="anav-contributions">
           <span class="nav-icon">&#8853;</span> Contributions
         </div>
+        <div class="nav-item" onclick="showAdminSection('admin-archive')" id="anav-archive">
+          <span class="nav-icon">&#9635;</span> Archive
+        </div>
         <div class="nav-item" onclick="showAdminSection('admin-invite')" id="anav-invite">
           <span class="nav-icon">&#9993;</span> Send Invitation
         </div>
@@ -818,6 +821,197 @@
           <p class="page-sub">Recent portal activity</p>
         </div>
         <div id="activity-list"><div class="loading">Loading...</div></div>
+      </div>
+
+      <!-- ARCHIVE -->
+      <div id="admin-archive" style="display:none">
+        <style>
+          .arch-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px;}
+          .arch-toolbar .form-input{margin:0;}
+          .arch-thumb{width:40px;height:40px;border:1px solid var(--border-light);display:inline-flex;align-items:center;
+            justify-content:center;font-family:'Cormorant Garamond',serif;font-size:14px;color:#0a0a0a;font-weight:600;background:#2a2a2a;}
+          .arch-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;}
+          .arch-dot.pub{background:#4e9a6a;}.arch-dot.priv{background:var(--grey);}
+          .arch-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin:0 0 22px;flex-wrap:wrap;}
+          .arch-tab{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--grey);padding:12px 16px;
+            cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+          .arch-tab.on{color:var(--white);border-bottom-color:var(--gold);}
+          .arch-panel{display:none;}.arch-panel.on{display:block;}
+          .arch-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 22px;}
+          .arch-grid .full{grid-column:1/-1;}
+          .arch-photos{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+          .arch-photo{width:110px;height:110px;border:1px solid var(--border-light);position:relative;object-fit:cover;background:#151515;}
+          .arch-photo .pp-tag{position:absolute;top:4px;left:4px;font-size:8px;letter-spacing:.1em;text-transform:uppercase;
+            background:rgba(0,0,0,.65);color:var(--gold-light);padding:1px 5px;}
+          .arch-photo .pp-x{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);color:#e74c3c;width:18px;height:18px;
+            border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;}
+          .arch-photo .pp-star{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.65);color:var(--gold);cursor:pointer;
+            font-size:11px;padding:1px 5px;}
+          .arch-ev{display:grid;grid-template-columns:130px 1fr auto;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);align-items:start;}
+          .arch-ev .etype{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#1a1405;background:var(--gold);padding:2px 7px;display:inline-block;margin-bottom:4px;}
+          .arch-mini-form{background:var(--surface);border:1px solid var(--border-light);padding:16px;margin-top:12px;display:none;}
+          .arch-mini-form.on{display:block;}
+          .arch-inline{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 14px;}
+          .arch-bstep{display:flex;gap:14px;margin-bottom:22px;}
+          .arch-bnum{width:26px;height:26px;flex-shrink:0;border-radius:50%;border:1px solid var(--gold);color:var(--gold);
+            display:flex;align-items:center;justify-content:center;font-size:12px;}
+          .arch-drop{border:1px dashed var(--border-light);padding:22px;text-align:center;color:var(--grey);cursor:pointer;margin-top:10px;}
+          .arch-drop:hover{border-color:var(--gold);color:var(--grey-light);}
+          .rp{font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border:1px solid;border-radius:2px;}
+          .rp.ok{color:#4e9a6a;border-color:#4e9a6a;}.rp.warn{color:var(--gold-light);border-color:var(--gold);}
+        </style>
+
+        <!-- LIST MODE -->
+        <div id="arch-list">
+          <div class="page-header section-header">
+            <div><h1 class="page-title">The Archive</h1><p class="page-sub" id="arch-count">Loading catalogue&hellip;</p></div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn-ghost" style="font-size:10px;" onclick="archMode('bulk')">&#8595; Bulk Import</button>
+              <button class="btn-primary" style="font-size:10px;max-width:160px;" onclick="archNewItem()">+ New Item</button>
+            </div>
+          </div>
+          <div id="arch-alert"></div>
+          <div class="arch-toolbar">
+            <input type="text" id="arch-search" class="form-input" placeholder="Search title, maker, accession&hellip;" oninput="archRenderList()" style="max-width:280px;">
+            <select id="arch-filter-cat" class="form-input select-input" onchange="archRenderList()" style="max-width:220px;"><option value="">All categories</option></select>
+          </div>
+          <div id="arch-list-body"><div class="loading">Loading&hellip;</div></div>
+        </div>
+
+        <!-- EDITOR MODE -->
+        <div id="arch-editor" style="display:none">
+          <div class="page-header section-header">
+            <div><h1 class="page-title" id="arch-ed-title">Edit Item</h1><p class="page-sub" id="arch-ed-sub"></p></div>
+            <button class="btn-ghost" style="font-size:10px;" onclick="archMode('list')">&larr; Back to catalogue</button>
+          </div>
+          <div id="arch-ed-alert"></div>
+          <div class="arch-tabs">
+            <div class="arch-tab on" data-ap="details" onclick="archTab('details')">Details</div>
+            <div class="arch-tab" data-ap="photos" onclick="archTab('photos')">Photos</div>
+            <div class="arch-tab" data-ap="provenance" onclick="archTab('provenance')">Provenance</div>
+            <div class="arch-tab" data-ap="valuations" onclick="archTab('valuations')">Valuations</div>
+            <div class="arch-tab" data-ap="certs" onclick="archTab('certs')">Certifications</div>
+          </div>
+
+          <div class="arch-panel on" data-apanel="details">
+            <div class="arch-grid">
+              <div class="form-group full"><label class="form-label">Title *</label><input class="form-input" id="ae-title"></div>
+              <div class="form-group"><label class="form-label">Accession No.</label><input class="form-input" id="ae-accession_no" placeholder="PC-1934-0071"></div>
+              <div class="form-group"><label class="form-label">Category</label><select class="form-input select-input" id="ae-category_id"></select></div>
+              <div class="form-group"><label class="form-label">Maker / Issuer</label><input class="form-input" id="ae-maker"></div>
+              <div class="form-group"><label class="form-label">Origin country</label><input class="form-input" id="ae-origin_country"></div>
+              <div class="form-group"><label class="form-label">Date (text)</label><input class="form-input" id="ae-date_text" placeholder="c. 1780 or 1934"></div>
+              <div class="form-group"><label class="form-label">Subcategory</label><input class="form-input" id="ae-subcategory"></div>
+              <div class="form-group"><label class="form-label">Year from</label><input class="form-input" id="ae-year_from" type="number"></div>
+              <div class="form-group"><label class="form-label">Year to</label><input class="form-input" id="ae-year_to" type="number"></div>
+              <div class="form-group"><label class="form-label">Medium</label><input class="form-input" id="ae-medium"></div>
+              <div class="form-group"><label class="form-label">Dimensions</label><input class="form-input" id="ae-dimensions"></div>
+              <div class="form-group"><label class="form-label">Weight</label><input class="form-input" id="ae-weight"></div>
+              <div class="form-group"><label class="form-label">Condition / Grade</label><input class="form-input" id="ae-condition"></div>
+              <div class="form-group"><label class="form-label">Edition</label><input class="form-input" id="ae-edition_info"></div>
+              <div class="form-group"><label class="form-label">Held by</label><input class="form-input" id="ae-held_by" placeholder="Preston family"></div>
+              <div class="form-group"><label class="form-label">Generation</label><input class="form-input" id="ae-generation" type="number" placeholder="1 = earliest"></div>
+              <div class="form-group"><label class="form-label">Current location <span style="color:var(--grey);text-transform:none;letter-spacing:0;">(never public)</span></label><input class="form-input" id="ae-current_location" placeholder="Vault / safe / on loan"></div>
+              <div class="form-group"><label class="form-label">Status</label><select class="form-input select-input" id="ae-status"><option value="active">active</option><option value="on_loan">on_loan</option><option value="deaccessioned">deaccessioned</option><option value="lost">lost</option></select></div>
+              <div class="form-group"><label class="form-label">Est. value <span style="color:var(--grey);text-transform:none;letter-spacing:0;">(never public)</span></label><input class="form-input" id="ae-estimated_value" type="number" step="0.01"></div>
+              <div class="form-group"><label class="form-label">Currency</label><input class="form-input" id="ae-currency" placeholder="USD"></div>
+              <div class="form-group full"><label class="form-label">Short description</label><input class="form-input" id="ae-short_desc"></div>
+              <div class="form-group full"><label class="form-label">Curatorial description</label><textarea class="form-input form-textarea" id="ae-description" rows="4"></textarea></div>
+              <div class="form-group full"><label class="form-label">Tags <span style="color:var(--grey);text-transform:none;letter-spacing:0;">(semicolon-separated)</span></label><input class="form-input" id="ae-tags" placeholder="bradman;cricket;1934"></div>
+              <div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:10px;"><input type="checkbox" id="ae-is_public" style="width:auto;"> Show on public Collections page</label></div>
+              <div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:10px;"><input type="checkbox" id="ae-is_featured" style="width:auto;"> Featured</label></div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:22px;border-top:1px solid var(--border);padding-top:20px;">
+              <button class="btn-primary" id="arch-save-btn" data-label="Save Item" style="max-width:200px;" onclick="archSaveItem()">Save Item</button>
+              <button class="btn-ghost" id="arch-del-btn" style="font-size:10px;display:none;" onclick="archDeleteItem()">Delete Item</button>
+            </div>
+          </div>
+
+          <div class="arch-panel" data-apanel="photos">
+            <div id="arch-photo-grid" class="arch-photos"></div>
+            <div class="arch-drop" id="arch-photo-drop" onclick="document.getElementById('arch-photo-input').click()">
+              Click to upload a photo (JP/PNG). Bytes go straight to secure storage.
+            </div>
+            <input type="file" id="arch-photo-input" accept="image/*" style="display:none" onchange="archUploadPhoto(this.files[0])">
+            <p style="color:var(--grey);font-size:12px;margin-top:10px;">Save the item first if it&rsquo;s new, then add photos.</p>
+          </div>
+
+          <div class="arch-panel" data-apanel="provenance">
+            <div id="arch-prov-list"></div>
+            <button class="btn-ghost" style="font-size:10px;margin-top:14px;" onclick="archToggleForm('prov')">+ Add provenance event</button>
+            <div class="arch-mini-form" id="arch-prov-form">
+              <div class="arch-inline">
+                <div class="form-group"><label class="form-label">Event type</label><select class="form-input select-input" id="apf-event_type"><option>acquired</option><option>inherited</option><option>gifted</option><option>issued</option><option>exhibited</option><option>appraised</option><option>restored</option><option>loaned</option><option>deaccessioned</option></select></div>
+                <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="apf-event_date" type="date"></div>
+                <div class="form-group"><label class="form-label">Actor</label><input class="form-input" id="apf-actor"></div>
+                <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="apf-location"></div>
+                <div class="form-group full"><label class="form-label">Detail</label><input class="form-input" id="apf-detail"></div>
+              </div>
+              <button class="btn-primary" style="font-size:10px;max-width:140px;margin-top:12px;" onclick="archAddProv()">Add event</button>
+            </div>
+          </div>
+
+          <div class="arch-panel" data-apanel="valuations">
+            <div id="arch-val-list"></div>
+            <button class="btn-ghost" style="font-size:10px;margin-top:14px;" onclick="archToggleForm('val')">+ Add valuation</button>
+            <div class="arch-mini-form" id="arch-val-form">
+              <div class="arch-inline">
+                <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="avf-valued_on" type="date"></div>
+                <div class="form-group"><label class="form-label">Amount</label><input class="form-input" id="avf-amount" type="number" step="0.01"></div>
+                <div class="form-group"><label class="form-label">Currency</label><input class="form-input" id="avf-currency" placeholder="USD"></div>
+                <div class="form-group"><label class="form-label">Basis</label><select class="form-input select-input" id="avf-basis"><option>acquisition</option><option>appraisal</option><option>auction comp</option><option>insurance</option></select></div>
+                <div class="form-group full"><label class="form-label">Source / note</label><input class="form-input" id="avf-source"></div>
+              </div>
+              <button class="btn-primary" style="font-size:10px;max-width:140px;margin-top:12px;" onclick="archAddVal()">Add valuation</button>
+            </div>
+          </div>
+
+          <div class="arch-panel" data-apanel="certs">
+            <div id="arch-cert-list"></div>
+            <button class="btn-ghost" style="font-size:10px;margin-top:14px;" onclick="archToggleForm('cert')">+ Link a certification</button>
+            <div class="arch-mini-form" id="arch-cert-form">
+              <div class="arch-inline">
+                <div class="form-group"><label class="form-label">Provider</label><select class="form-input select-input" id="acf-provider"><option>PSA</option><option>PCGS</option><option>NGC</option><option>SGC</option><option>BGS</option><option>CGC</option><option>CSG</option><option>JSA</option><option>Beckett</option><option>Other</option></select></div>
+                <div class="form-group"><label class="form-label">Cert number</label><input class="form-input" id="acf-cert_number"></div>
+                <div class="form-group"><label class="form-label">Grade</label><input class="form-input" id="acf-grade"></div>
+                <div class="form-group full"><label class="form-label">Verification URL (optional)</label><input class="form-input" id="acf-url"></div>
+              </div>
+              <button class="btn-primary" style="font-size:10px;max-width:140px;margin-top:12px;" onclick="archAddCert()">Add certification</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BULK MODE -->
+        <div id="arch-bulk" style="display:none">
+          <div class="page-header section-header">
+            <div><h1 class="page-title">Bulk Import</h1><p class="page-sub">Add many items at once from an Excel spreadsheet</p></div>
+            <button class="btn-ghost" style="font-size:10px;" onclick="archMode('list')">&larr; Back to catalogue</button>
+          </div>
+          <div id="arch-bulk-alert"></div>
+          <div class="arch-bstep">
+            <div class="arch-bnum">1</div>
+            <div><div style="color:var(--white);font-size:14px;">Download the template</div>
+              <p style="color:var(--grey);font-size:12px;margin:4px 0 10px;">One row per object. Includes cert columns (PSA/PCGS/NGC/SGC) and optional Provenance and Valuations sheets.</p>
+              <a class="btn-primary" style="font-size:10px;max-width:240px;display:inline-block;text-decoration:none;text-align:center;" href="templates/preston-archive-import-template.xlsx" download>&#8595; Download template (.xlsx)</a>
+            </div>
+          </div>
+          <div class="arch-bstep">
+            <div class="arch-bnum">2</div>
+            <div style="flex:1;"><div style="color:var(--white);font-size:14px;">Fill it in, then upload</div>
+              <p style="color:var(--grey);font-size:12px;margin:4px 0 0;">Title and Category are required. Delete the green example row before uploading.</p>
+              <div class="arch-drop" id="arch-bulk-drop" onclick="document.getElementById('arch-bulk-input').click()">Click to choose your completed .xlsx</div>
+              <input type="file" id="arch-bulk-input" accept=".xlsx,.xls" style="display:none" onchange="archBulkParse(this.files[0])">
+            </div>
+          </div>
+          <div class="arch-bstep" id="arch-bulk-step3" style="display:none">
+            <div class="arch-bnum">3</div>
+            <div style="flex:1;"><div style="color:var(--white);font-size:14px;">Review, then import</div>
+              <div id="arch-bulk-summary" style="font-size:12px;color:var(--grey);margin:6px 0 10px;"></div>
+              <div id="arch-bulk-preview" style="overflow:auto;"></div>
+              <button class="btn-primary" id="arch-bulk-import-btn" data-label="Import Items" style="font-size:10px;max-width:200px;margin-top:14px;" onclick="archBulkImport()">Import Items</button>
+            </div>
+          </div>
+        </div>
       </div>
 
     </main>
@@ -3188,14 +3382,15 @@ function showMemberSection(id) {
 }
 
 function showAdminSection(id) {
-  ['admin-dashboard','admin-applications','admin-members','admin-contributions','admin-invite','admin-create-member','admin-activity'].forEach(s => {
+  ['admin-dashboard','admin-applications','admin-members','admin-contributions','admin-archive','admin-invite','admin-create-member','admin-activity'].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = s === id ? 'block' : 'none';
   });
-  ['anav-dashboard','anav-applications','anav-members','anav-contributions','anav-invite','anav-create-member','anav-activity'].forEach(n => {
+  ['anav-dashboard','anav-applications','anav-members','anav-contributions','anav-archive','anav-invite','anav-create-member','anav-activity'].forEach(n => {
     const el = document.getElementById(n);
     if (el) el.classList.toggle('active', n === 'anav-' + id.replace('admin-',''));
   });
+  if (id === 'admin-archive' && !window._archiveLoaded) { window._archiveLoaded = true; archiveInit(); }
 }
 
 function showAlert(containerId, message, type) {
@@ -3618,6 +3813,326 @@ async function saveItemEdit() {
   toggleItemEdit();
   openItemDetail(_currentItem);
 }
+
+// ================================================================
+// ARCHIVE — curated master catalogue (direct Supabase, admin JWT)
+// ================================================================
+const ARCH_BUCKET = 'archive';
+function aEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function aHead(extra){return Object.assign({apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+window._accessToken,Accept:'application/json'},extra||{});}
+async function aRest(path,opts){
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, opts||{headers:aHead()});
+  if(!r.ok) throw new Error('DB '+r.status+': '+await r.text());
+  const txt = await r.text();
+  return txt ? JSON.parse(txt) : null;
+}
+function aAlert(id,msg,type){showAlert(id,msg,type||'error');}
+
+async function archiveInit(){
+  try{
+    _archCats = await aRest('archive_categories?select=id,name,slug&order=display_order.asc');
+    _archCatById = {}; _archCatByName = {};
+    _archCats.forEach(c=>{ _archCatById[c.id]=c; _archCatByName[c.name.toLowerCase()]=c.id; _archCatByName[c.slug]=c.id; });
+    const fOpts = '<option value="">All categories</option>'+_archCats.map(c=>`<option value="${c.id}">${aEsc(c.name)}</option>`).join('');
+    document.getElementById('arch-filter-cat').innerHTML = fOpts;
+    document.getElementById('ae-category_id').innerHTML = '<option value="">&mdash; Category &mdash;</option>'+_archCats.map(c=>`<option value="${c.id}">${aEsc(c.name)}</option>`).join('');
+    await archLoadItems();
+  }catch(e){
+    document.getElementById('arch-list-body').innerHTML =
+      '<div class="empty-state"><p>Archive tables not found yet. Run migration <code>003_archive_schema.sql</code> in Supabase to activate.</p><p style="color:var(--grey);font-size:12px;margin-top:8px;">'+aEsc(e.message)+'</p></div>';
+  }
+}
+
+async function archLoadItems(){
+  _archItems = await aRest('archive_items?select=*,archive_categories(name,slug)&order=display_order.asc,title.asc');
+  archRenderList();
+}
+
+function archMode(m){
+  document.getElementById('arch-list').style.display   = m==='list'?'block':'none';
+  document.getElementById('arch-editor').style.display = m==='edit'?'block':'none';
+  document.getElementById('arch-bulk').style.display   = m==='bulk'?'block':'none';
+  if(m==='list') archLoadItems();
+}
+function archTab(t){
+  document.querySelectorAll('#arch-editor .arch-tab').forEach(x=>x.classList.toggle('on',x.dataset.ap===t));
+  document.querySelectorAll('#arch-editor .arch-panel').forEach(p=>p.classList.toggle('on',p.dataset.apanel===t));
+}
+
+function archRenderList(){
+  const q=(document.getElementById('arch-search').value||'').toLowerCase();
+  const cat=document.getElementById('arch-filter-cat').value;
+  const rows=(_archItems||[]).filter(it=>{
+    if(cat && it.category_id!==cat) return false;
+    if(!q) return true;
+    return [it.title,it.maker,it.accession_no].some(v=>(v||'').toLowerCase().includes(q));
+  });
+  const pub=(_archItems||[]).filter(i=>i.is_public).length;
+  document.getElementById('arch-count').textContent=`${_archItems.length} catalogued · ${pub} published · ${_archCats.length} categories`;
+  const el=document.getElementById('arch-list-body');
+  if(!rows.length){ el.innerHTML='<div class="empty-state"><div class="empty-icon">&#9635;</div><p>No items. Click &ldquo;New Item&rdquo; or use Bulk Import.</p></div>'; return; }
+  el.innerHTML='<table class="data-table"><thead><tr><th></th><th>Title</th><th>Accession</th><th>Category</th><th>Visibility</th><th></th></tr></thead><tbody>'+
+    rows.map(it=>{
+      const ini=(it.title||'?').replace(/[^A-Za-z]/g,'').substring(0,2).toUpperCase()||'&#9635;';
+      const cn=it.archive_categories?aEsc(it.archive_categories.name):'&mdash;';
+      return `<tr><td><span class="arch-thumb">${ini}</span></td>`+
+        `<td><strong>${aEsc(it.title)}</strong></td>`+
+        `<td style="color:var(--grey)">${aEsc(it.accession_no||'—')}</td>`+
+        `<td style="color:var(--grey)">${cn}</td>`+
+        `<td><span class="arch-dot ${it.is_public?'pub':'priv'}"></span>${it.is_public?'Public':'Private'}</td>`+
+        `<td><button class="btn-sm btn-approve" onclick="archEditItem('${it.id}')">Edit</button></td></tr>`;
+    }).join('')+'</tbody></table>';
+}
+
+const AE_FIELDS=['accession_no','title','subcategory','short_desc','description','maker','origin_country','date_text','year_from','year_to','medium','dimensions','weight','condition','edition_info','held_by','generation','current_location','status','estimated_value','currency','tags'];
+function archClearForm(){
+  AE_FIELDS.forEach(f=>{const e=document.getElementById('ae-'+f); if(e) e.value='';});
+  document.getElementById('ae-category_id').value='';
+  document.getElementById('ae-is_public').checked=false;
+  document.getElementById('ae-is_featured').checked=false;
+  document.getElementById('ae-status').value='active';
+  ['arch-photo-grid','arch-prov-list','arch-val-list','arch-cert-list'].forEach(id=>{const e=document.getElementById(id); if(e) e.innerHTML='';});
+}
+function archNewItem(){
+  _archEditingId=null; archClearForm();
+  document.getElementById('arch-ed-title').textContent='New Item';
+  document.getElementById('arch-ed-sub').textContent='Add a new record to the archive';
+  document.getElementById('arch-del-btn').style.display='none';
+  archTab('details'); archMode('edit');
+}
+async function archEditItem(id){
+  const it=_archItems.find(x=>x.id===id); if(!it) return;
+  _archEditingId=id; archClearForm();
+  AE_FIELDS.forEach(f=>{const e=document.getElementById('ae-'+f); if(e && it[f]!=null) e.value = f==='tags' ? (it.tags||[]).join(';') : it[f];});
+  document.getElementById('ae-category_id').value=it.category_id||'';
+  document.getElementById('ae-status').value=it.status||'active';
+  document.getElementById('ae-is_public').checked=!!it.is_public;
+  document.getElementById('ae-is_featured').checked=!!it.is_featured;
+  document.getElementById('arch-ed-title').textContent=it.title||'Edit Item';
+  document.getElementById('arch-ed-sub').textContent=it.accession_no||'';
+  document.getElementById('arch-del-btn').style.display='inline-block';
+  archTab('details'); archMode('edit');
+  archLoadPhotos(); archLoadProv(); archLoadVal(); archLoadCert();
+}
+function archFormToRow(){
+  const row={};
+  AE_FIELDS.forEach(f=>{const e=document.getElementById('ae-'+f); if(!e) return; let v=e.value.trim();
+    if(f==='tags'){ row.tags = v?v.split(';').map(s=>s.trim()).filter(Boolean):[]; return; }
+    if(['year_from','year_to','generation'].includes(f)){ row[f]=v?parseInt(v,10):null; return; }
+    if(['estimated_value'].includes(f)){ row[f]=v?parseFloat(v):null; return; }
+    row[f]=v||null;
+  });
+  row.category_id=document.getElementById('ae-category_id').value||null;
+  row.status=document.getElementById('ae-status').value;
+  row.is_public=document.getElementById('ae-is_public').checked;
+  row.is_featured=document.getElementById('ae-is_featured').checked;
+  return row;
+}
+async function archSaveItem(){
+  const row=archFormToRow();
+  if(!row.title){ aAlert('arch-ed-alert','Title is required.'); return; }
+  setLoading('arch-save-btn',true);
+  try{
+    let saved;
+    if(_archEditingId){
+      saved=await aRest(`archive_items?id=eq.${_archEditingId}`,{method:'PATCH',headers:aHead({'Content-Type':'application/json',Prefer:'return=representation'}),body:JSON.stringify(row)});
+    }else{
+      row.created_by=currentUser.id;
+      saved=await aRest('archive_items',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'return=representation'}),body:JSON.stringify(row)});
+    }
+    _archEditingId=(saved&&saved[0]&&saved[0].id)||_archEditingId;
+    document.getElementById('arch-del-btn').style.display='inline-block';
+    document.getElementById('arch-ed-title').textContent=row.title;
+    aAlert('arch-ed-alert','Saved.','success');
+    await archLoadItems();
+  }catch(e){ aAlert('arch-ed-alert','Save failed: '+e.message); }
+  setLoading('arch-save-btn',false);
+}
+async function archDeleteItem(){
+  if(!_archEditingId||!confirm('Delete this item and all its photos, provenance and valuations?')) return;
+  try{ await aRest(`archive_items?id=eq.${_archEditingId}`,{method:'DELETE',headers:aHead({Prefer:'return=minimal'})});
+    await archLoadItems(); archMode('list');
+  }catch(e){ aAlert('arch-ed-alert','Delete failed: '+e.message); }
+}
+
+// ---- child records ----
+function archNeedSaved(){ if(!_archEditingId){ alert('Save the item first, then add photos, provenance, valuations or certifications.'); return true;} return false; }
+function archToggleForm(k){ if(archNeedSaved()) return; document.getElementById('arch-'+k+'-form').classList.toggle('on'); }
+
+async function archSignedUrl(path){
+  const r=await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${ARCH_BUCKET}/${path}`,{method:'POST',headers:aHead({'Content-Type':'application/json'}),body:JSON.stringify({expiresIn:3600})});
+  if(!r.ok) return null; const j=await r.json(); return `${SUPABASE_URL}/storage/v1${j.signedURL}`;
+}
+async function archLoadPhotos(){
+  const grid=document.getElementById('arch-photo-grid'); grid.innerHTML='';
+  const photos=await aRest(`archive_photos?item_id=eq.${_archEditingId}&order=is_primary.desc,display_order.asc`);
+  for(const p of photos){
+    const url=await archSignedUrl(p.storage_path);
+    const d=document.createElement('div'); d.style.position='relative';
+    d.innerHTML=`<img class="arch-photo" src="${url||''}" alt="">`+
+      (p.is_primary?'<span class="pp-tag">Primary</span>':`<span class="pp-star" title="Make primary" onclick="archSetPrimary('${p.id}')">&#9734;</span>`)+
+      `<span class="pp-x" title="Remove" onclick="archRemovePhoto('${p.id}')">&times;</span>`;
+    grid.appendChild(d);
+  }
+}
+async function archUploadPhoto(file){
+  if(!file) return; if(archNeedSaved()) return;
+  const path=`items/${_archEditingId}/${Date.now()}_${file.name.replace(/[^A-Za-z0-9._-]/g,'_')}`;
+  try{
+    const up=await fetch(`${SUPABASE_URL}/storage/v1/object/${ARCH_BUCKET}/${path}`,{method:'POST',headers:aHead({'Content-Type':file.type||'application/octet-stream','x-upsert':'true'}),body:file});
+    if(!up.ok) throw new Error(await up.text());
+    const existing=await aRest(`archive_photos?item_id=eq.${_archEditingId}&select=id`);
+    await aRest('archive_photos',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify({item_id:_archEditingId,storage_path:path,is_primary:existing.length===0,bytes:file.size,content_type:file.type})});
+    document.getElementById('arch-photo-input').value='';
+    archLoadPhotos();
+  }catch(e){ aAlert('arch-ed-alert','Upload failed: '+e.message); }
+}
+async function archSetPrimary(id){
+  await aRest(`archive_photos?item_id=eq.${_archEditingId}`,{method:'PATCH',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify({is_primary:false})});
+  await aRest(`archive_photos?id=eq.${id}`,{method:'PATCH',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify({is_primary:true})});
+  archLoadPhotos();
+}
+async function archRemovePhoto(id){
+  if(!confirm('Remove this photo?')) return;
+  await aRest(`archive_photos?id=eq.${id}`,{method:'DELETE',headers:aHead({Prefer:'return=minimal'})});
+  archLoadPhotos();
+}
+
+async function archLoadProv(){
+  const rows=await aRest(`archive_provenance?item_id=eq.${_archEditingId}&order=sort_key.asc,event_date.asc`);
+  document.getElementById('arch-prov-list').innerHTML = rows.length ? rows.map(r=>
+    `<div class="arch-ev"><div style="color:var(--grey);font-size:12px;">${aEsc(r.event_date||'—')}</div>`+
+    `<div><span class="etype">${aEsc(r.event_type)}</span><div>${aEsc(r.actor||'')}</div>`+
+    `<div style="color:var(--grey-light);font-size:13px;">${aEsc([r.detail,r.location].filter(Boolean).join(' · '))}</div></div>`+
+    `<button class="btn-sm btn-reject" onclick="archDelChild('archive_provenance','${r.id}','prov')">&times;</button></div>`).join('') :
+    '<p style="color:var(--grey);font-size:13px;">No provenance events yet.</p>';
+}
+async function archAddProv(){
+  if(archNeedSaved()) return;
+  const row={item_id:_archEditingId,event_type:document.getElementById('apf-event_type').value,
+    event_date:document.getElementById('apf-event_date').value||null,actor:document.getElementById('apf-actor').value||null,
+    location:document.getElementById('apf-location').value||null,detail:document.getElementById('apf-detail').value||null};
+  await aRest('archive_provenance',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(row)});
+  ['apf-actor','apf-location','apf-detail'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('arch-prov-form').classList.remove('on'); archLoadProv();
+}
+async function archLoadVal(){
+  const rows=await aRest(`archive_valuations?item_id=eq.${_archEditingId}&order=valued_on.desc`);
+  document.getElementById('arch-val-list').innerHTML = rows.length ?
+    '<table class="data-table"><thead><tr><th>Date</th><th>Basis</th><th>Source</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>'+
+    rows.map(r=>`<tr><td>${aEsc(r.valued_on||'')}</td><td>${aEsc(r.basis||'')}</td><td style="color:var(--grey)">${aEsc(r.source||'')}</td>`+
+    `<td style="text-align:right">${aEsc((r.currency||'USD')+' '+Number(r.amount).toLocaleString())}</td>`+
+    `<td><button class="btn-sm btn-reject" onclick="archDelChild('archive_valuations','${r.id}','val')">&times;</button></td></tr>`).join('')+'</tbody></table>' :
+    '<p style="color:var(--grey);font-size:13px;">No valuations yet.</p>';
+}
+async function archAddVal(){
+  if(archNeedSaved()) return;
+  const amt=parseFloat(document.getElementById('avf-amount').value); if(isNaN(amt)){alert('Enter an amount.');return;}
+  const row={item_id:_archEditingId,valued_on:document.getElementById('avf-valued_on').value||new Date().toISOString().slice(0,10),
+    amount:amt,currency:document.getElementById('avf-currency').value||'USD',basis:document.getElementById('avf-basis').value,
+    source:document.getElementById('avf-source').value||null};
+  await aRest('archive_valuations',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(row)});
+  document.getElementById('avf-amount').value=''; document.getElementById('avf-source').value='';
+  document.getElementById('arch-val-form').classList.remove('on'); archLoadVal();
+}
+async function archLoadCert(){
+  const rows=await aRest(`archive_certifications?item_id=eq.${_archEditingId}`);
+  document.getElementById('arch-cert-list').innerHTML = rows.length ? rows.map(r=>
+    `<div class="arch-ev"><div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);">${aEsc(r.provider)}</div>`+
+    `<div><div style="font-size:13px;">Cert #${aEsc(r.cert_number)}</div><div style="color:var(--grey);font-size:12px;">Grade: ${aEsc(r.grade||'—')}</div></div>`+
+    `<button class="btn-sm btn-reject" onclick="archDelChild('archive_certifications','${r.id}','cert')">&times;</button></div>`).join('') :
+    '<p style="color:var(--grey);font-size:13px;">No certifications linked.</p>';
+}
+async function archAddCert(){
+  if(archNeedSaved()) return;
+  const num=document.getElementById('acf-cert_number').value.trim(); if(!num){alert('Enter a cert number.');return;}
+  const row={item_id:_archEditingId,provider:document.getElementById('acf-provider').value,cert_number:num,
+    grade:document.getElementById('acf-grade').value||null};
+  await aRest('archive_certifications?on_conflict=provider,cert_number',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify(row)});
+  document.getElementById('acf-cert_number').value=''; document.getElementById('acf-grade').value='';
+  document.getElementById('arch-cert-form').classList.remove('on'); archLoadCert();
+}
+async function archDelChild(table,id,kind){
+  if(!confirm('Remove this entry?')) return;
+  await aRest(`${table}?id=eq.${id}`,{method:'DELETE',headers:aHead({Prefer:'return=minimal'})});
+  ({prov:archLoadProv,val:archLoadVal,cert:archLoadCert})[kind]();
+}
+
+// ---- bulk import ----
+function archLoadSheetJS(){
+  return new Promise((res,rej)=>{
+    if(window.XLSX) return res();
+    const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload=()=>res(); s.onerror=()=>rej(new Error('Could not load spreadsheet reader')); document.head.appendChild(s);
+  });
+}
+function archSheet(wb,name){ const s=wb.Sheets[wb.SheetNames.find(n=>n.toLowerCase().startsWith(name))]; return s?XLSX.utils.sheet_to_json(s,{raw:false,defval:''}):[]; }
+async function archBulkParse(file){
+  if(!file) return;
+  try{ await archLoadSheetJS(); }catch(e){ aAlert('arch-bulk-alert',e.message); return; }
+  const data=await file.arrayBuffer();
+  const wb=XLSX.read(data,{type:'array'});
+  const items=archSheet(wb,'items').filter(r=>String(r.title||'').trim() && !String(r.accession_no||'').includes('EXAMPLE'));
+  window._archBulk={items,prov:archSheet(wb,'provenance'),val:archSheet(wb,'valuation')};
+  let ok=0,warn=0;
+  const rowsHtml=items.slice(0,80).map(r=>{
+    const hasCat=!!(r.category && _archCatByName[String(r.category).toLowerCase()]);
+    const good=String(r.title||'').trim() && hasCat; good?ok++:warn++;
+    const cert=(r.cert_provider&&r.cert_number)?`${aEsc(r.cert_provider)} ${aEsc(r.cert_number)}`:'—';
+    return `<tr><td>${aEsc(r.accession_no||'—')}</td><td>${aEsc(r.title)}</td><td>${aEsc(r.category||'')}</td><td>${cert}</td>`+
+      `<td><span class="rp ${good?'ok':'warn'}">${good?'Ready':(hasCat?'Check':'No category')}</span></td></tr>`;
+  }).join('');
+  // count remaining beyond preview
+  items.slice(80).forEach(r=>{ (String(r.title||'').trim() && r.category && _archCatByName[String(r.category).toLowerCase()])?ok++:warn++; });
+  document.getElementById('arch-bulk-summary').innerHTML=`<b style="color:var(--white)">${aEsc(file.name)}</b> · ${items.length} rows · <span style="color:#4e9a6a">${ok} ready</span> · <span style="color:var(--gold-light)">${warn} need attention</span>`;
+  document.getElementById('arch-bulk-preview').innerHTML='<table class="data-table"><thead><tr><th>Accession</th><th>Title</th><th>Category</th><th>Cert</th><th>Status</th></tr></thead><tbody>'+rowsHtml+'</tbody></table>'+(items.length>80?'<p style="color:var(--grey);font-size:12px;margin-top:8px;">Showing first 80 of '+items.length+'.</p>':'');
+  document.getElementById('arch-bulk-step3').style.display='flex';
+}
+function archMapItem(r){
+  const row={ title:String(r.title).trim(), category_id:_archCatByName[String(r.category||'').toLowerCase()]||null,
+    accession_no:r.accession_no||null, subcategory:r.subcategory||null, short_desc:r.short_desc||null, description:r.description||null,
+    maker:r.maker||null, origin_country:r.origin_country||null, date_text:r.date_text||null,
+    year_from:r.year_from?parseInt(r.year_from,10):null, year_to:r.year_to?parseInt(r.year_to,10):null,
+    medium:r.medium||null, dimensions:r.dimensions||null, weight:r.weight||null, condition:r.condition||null,
+    edition_info:r.edition_info||null, held_by:r.held_by||null, generation:r.generation?parseInt(r.generation,10):null,
+    current_location:r.current_location||null, tags:r.tags?String(r.tags).split(';').map(s=>s.trim()).filter(Boolean):[],
+    is_public:/^(true|yes|1)$/i.test(String(r.is_public)), is_featured:/^(true|yes|1)$/i.test(String(r.is_featured)),
+    status:r.status||'active', acquisition_source:r.acquisition_source||null,
+    acquisition_price:r.acquisition_price?parseFloat(r.acquisition_price):null,
+    acquisition_date:r.acquisition_date||null, estimated_value:r.estimated_value?parseFloat(r.estimated_value):null,
+    currency:r.currency||'USD', created_by:currentUser.id };
+  return row;
+}
+async function archBulkImport(){
+  const bulk=window._archBulk; if(!bulk||!bulk.items.length){ aAlert('arch-bulk-alert','Nothing to import.'); return; }
+  const rows=bulk.items.filter(r=>String(r.title||'').trim());
+  setLoading('arch-bulk-import-btn',true);
+  try{
+    const withAcc=rows.filter(r=>r.accession_no), noAcc=rows.filter(r=>!r.accession_no);
+    let saved=[];
+    if(withAcc.length){ saved=saved.concat(await aRest('archive_items?on_conflict=accession_no',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(withAcc.map(archMapItem))})); }
+    if(noAcc.length){ saved=saved.concat(await aRest('archive_items',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'return=representation'}),body:JSON.stringify(noAcc.map(archMapItem))})); }
+    const byAcc={}; saved.forEach(s=>{ if(s.accession_no) byAcc[s.accession_no]=s.id; });
+    // certifications
+    const certs=rows.filter(r=>r.cert_provider&&r.cert_number&&r.accession_no&&byAcc[r.accession_no])
+      .map(r=>({item_id:byAcc[r.accession_no],provider:r.cert_provider,cert_number:String(r.cert_number),grade:r.cert_grade||null,verified_at:null}));
+    if(certs.length) await aRest('archive_certifications?on_conflict=provider,cert_number',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify(certs)});
+    // optional provenance + valuations keyed by accession_no
+    const prov=(bulk.prov||[]).filter(r=>r.accession_no&&byAcc[r.accession_no]&&r.event_type)
+      .map(r=>({item_id:byAcc[r.accession_no],event_type:r.event_type,event_date:r.event_date||null,actor:r.actor||null,location:r.location||null,detail:r.detail||null}));
+    if(prov.length) await aRest('archive_provenance',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(prov)});
+    const vals=(bulk.val||[]).filter(r=>r.accession_no&&byAcc[r.accession_no]&&r.amount)
+      .map(r=>({item_id:byAcc[r.accession_no],valued_on:r.valued_on||new Date().toISOString().slice(0,10),amount:parseFloat(r.amount),currency:r.currency||'USD',basis:r.basis||null,source:r.source||null,note:r.note||null}));
+    if(vals.length) await aRest('archive_valuations',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(vals)});
+    aAlert('arch-bulk-alert',`Imported ${saved.length} items`+(certs.length?`, ${certs.length} certs`:'')+(prov.length?`, ${prov.length} provenance`:'')+(vals.length?`, ${vals.length} valuations`:'')+'.','success');
+    document.getElementById('arch-bulk-step3').style.display='none';
+    document.getElementById('arch-bulk-input').value='';
+    await archLoadItems();
+    setTimeout(()=>archMode('list'),1500);
+  }catch(e){ aAlert('arch-bulk-alert','Import failed: '+e.message); }
+  setLoading('arch-bulk-import-btn',false);
+}
+var _archCats=[],_archCatById={},_archCatByName={},_archItems=[],_archEditingId=null;
 </script>
 
 <div id="collection-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; overflow-y:auto;">

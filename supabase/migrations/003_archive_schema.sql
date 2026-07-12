@@ -348,13 +348,27 @@ drop policy if exists val_write on public.archive_valuations;
 create policy val_write on public.archive_valuations for all
   using (public.is_archivist()) with check (public.is_archivist());
 
+-- Storage: the private 'archive' bucket. Members may read (so signed URLs can
+-- be minted); admins may upload/replace/delete. This lets the portal work
+-- directly against Supabase with the admin's own JWT — no service-role needed.
+drop policy if exists archive_storage_read on storage.objects;
+create policy archive_storage_read on storage.objects for select
+  using (bucket_id = 'archive' and public.current_access_level() is not null);
+drop policy if exists archive_storage_write on storage.objects;
+create policy archive_storage_write on storage.objects for all
+  using (bucket_id = 'archive' and public.is_archivist())
+  with check (bucket_id = 'archive' and public.is_archivist());
+
 commit;
 
 -- ============================================================================
 -- Post-deploy notes
---   * The write-side Netlify functions use the service-role key and enforce
---     admin identity themselves (see netlify/functions/_lib/auth.js), so they
---     operate above RLS. RLS is the safety net for any direct anon/JWT access.
+--   * The portal (index.html) works DIRECTLY against Supabase using the signed-in
+--     admin's JWT — RLS above grants admins full write and members read, so no
+--     service-role key or Netlify function is required for day-to-day cataloguing.
+--   * The Netlify archive-* functions remain available for EXTERNAL API use
+--     (HubSpot/PSA sync, public site) and enforce admin identity themselves.
 --   * To publish an item to the public site: set is_public = true.
---   * Signed photo URLs are minted by /api/archive-photo-sign.
+--   * Photos live in the private 'archive' bucket; the portal mints short-lived
+--     signed URLs via POST /storage/v1/object/sign/archive/<path>.
 -- ============================================================================
