@@ -4151,7 +4151,7 @@ async function archVerifyAll(){
   const supported=(certs||[]).filter(c=>['PSA','PCGS'].includes(String(c.provider||'').toUpperCase()));
   if(!supported.length){ aAlert('arch-alert','No unverified PSA or PCGS certifications to check.','info'); return; }
   if(!confirm(`Look up and confirm grades for ${supported.length} unverified PSA/PCGS certification(s)?`)) return;
-  let ok=0,fail=0,corrected=0,stopped=false;
+  let ok=0,fail=0,corrected=0,stopped=false,stopWait=null;
   for(let i=0;i<supported.length && !stopped;i++){
     const c=supported[i];
     aAlert('arch-alert',`Verifying ${i+1} of ${supported.length}…`,'info');
@@ -4165,19 +4165,20 @@ async function archVerifyAll(){
         if(d.grade){ patch.grade=String(d.grade); if(c.grade && String(c.grade)!==String(d.grade)) corrected++; }
         await aRest(`archive_certifications?id=eq.${c.id}`,{method:'PATCH',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(patch)});
         ok++; done=true;
-      } else if(d && d.status===429 && attempt<2){
-        attempt++;
+      } else if(d && d.status===429 && attempt<2 && (d.retryAfter==null || d.retryAfter<=30)){
+        attempt++;                               // short burst limit → brief pause + retry
         const wait=((d.retryAfter||5*attempt))*1000;
         aAlert('arch-alert',`Rate limit — pausing ${Math.round(wait/1000)}s then retrying…`,'info');
         await new Promise(res=>setTimeout(res,wait));
       } else if(d && d.status===429){
-        stopped=true; done=true;                 // cap persists → stop cleanly
+        stopped=true; stopWait=d.retryAfter||null; done=true;   // long/daily cap → stop now
       } else { fail++; done=true; }
     }
     if(!stopped) await new Promise(res=>setTimeout(res,1200)); // gentle throttle
   }
+  const resume = stopWait ? (stopWait<3600?`in about ${Math.round(stopWait/60)} min`:`in about ${Math.round(stopWait/3600)} hour(s)`) : 'later';
   const msg = stopped
-    ? `Paused — the grading service's rate limit was reached. Verified ${ok} so far${corrected?`, ${corrected} correction(s)`:''}. Run "Verify all certs" again later to continue where it left off.`
+    ? `Paused — the grading service's daily lookup limit was reached. Verified ${ok} so far${corrected?`, ${corrected} correction(s)`:''}. Run "Verify all certs" again ${resume} to continue where it left off.`
     : `Verified ${ok}`+(fail?`, ${fail} not found/unavailable`:'')+(corrected?`, ${corrected} grade correction(s)`:'')+'.';
   aAlert('arch-alert', msg, stopped?'error':'success');
   if(_archEditingId) archLoadCert();

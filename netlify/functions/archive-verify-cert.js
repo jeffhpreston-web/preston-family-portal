@@ -29,14 +29,21 @@ function cors(event) {
 }
 const json = (s, d, event) => ({ statusCode: s, headers: { ...cors(event), 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
 
+function fmtWait(sec) {
+  if (!sec || sec <= 0) return 'shortly';
+  if (sec < 60) return `in ${sec}s`;
+  if (sec < 3600) return `in about ${Math.round(sec / 60)} min`;
+  return `in about ${Math.round(sec / 3600)} hour(s)`;
+}
+
 async function verifyPSA(cert) {
   const token = process.env.PSA_API_TOKEN;
   if (!token) return { error: 'PSA API token not configured (set PSA_API_TOKEN in Netlify).' };
   const r = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${encodeURIComponent(cert)}`,
     { headers: { Authorization: `bearer ${token}`, 'Content-Type': 'application/json' } });
   if (r.status === 429) {
-    const ra = r.headers.get('retry-after');
-    return { error: 'PSA rate limit reached. Try again' + (ra ? ` in ${ra}s` : ' shortly') + '.', status: 429, retryAfter: ra ? parseInt(ra, 10) : null };
+    const ra = r.headers.get('retry-after'); const sec = ra ? parseInt(ra, 10) : null;
+    return { error: `PSA rate limit reached — the daily lookup quota is likely exhausted. Try again ${fmtWait(sec)}.`, status: 429, retryAfter: sec };
   }
   const data = await r.json().catch(() => ({}));
   if (!r.ok) return { error: (data && data.message) || `PSA API error ${r.status}`, status: r.status };
@@ -52,8 +59,8 @@ async function verifyPCGS(cert) {
   const r = await fetch(`https://api.pcgs.com/publicapi/coindetail/GetCoinFactsByCertNo/${encodeURIComponent(cert)}`,
     { headers: { Authorization: `Bearer ${key}` } });
   if (r.status === 429) {
-    const ra = r.headers.get('retry-after');
-    return { error: 'PCGS rate limit reached. Try again' + (ra ? ` in ${ra}s` : ' shortly') + '.', status: 429, retryAfter: ra ? parseInt(ra, 10) : null };
+    const ra = r.headers.get('retry-after'); const sec = ra ? parseInt(ra, 10) : null;
+    return { error: `PCGS rate limit reached. Try again ${fmtWait(sec)}.`, status: 429, retryAfter: sec };
   }
   const data = await r.json().catch(() => ({}));
   if (!r.ok) return { error: `PCGS API error ${r.status}`, status: r.status };
