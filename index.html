@@ -874,6 +874,7 @@
           <div class="arch-toolbar">
             <input type="text" id="arch-search" class="form-input" placeholder="Search title, maker, accession&hellip;" oninput="archRenderList()" style="max-width:280px;">
             <select id="arch-filter-cat" class="form-input select-input" onchange="archRenderList()" style="max-width:220px;"><option value="">All categories</option></select>
+            <button class="btn-ghost" style="font-size:10px;margin-left:auto;" onclick="archVerifyAll()" title="Confirm grades for all unverified PSA/PCGS certifications">&#10003; Verify all certs</button>
           </div>
           <div id="arch-list-body"><div class="loading">Loading&hellip;</div></div>
         </div>
@@ -4142,6 +4143,32 @@ async function archVerifyCert(id,provider,cert){
     aAlert('arch-ed-alert','Verified with '+provider+(d.grade?(' — grade '+d.grade):'')+(d.subject?(' ('+d.subject+')'):'')+'.','success');
     archLoadCert();
   }catch(e){ aAlert('arch-ed-alert','Verify failed: '+e.message); }
+}
+async function archVerifyAll(){
+  let certs;
+  try{ certs=await aRest('archive_certifications?select=id,provider,cert_number,grade,verified_at&verified_at=is.null'); }
+  catch(e){ aAlert('arch-alert','Could not load certifications: '+e.message); return; }
+  const supported=(certs||[]).filter(c=>['PSA','PCGS'].includes(String(c.provider||'').toUpperCase()));
+  if(!supported.length){ aAlert('arch-alert','No unverified PSA or PCGS certifications to check.','info'); return; }
+  if(!confirm(`Look up and confirm grades for ${supported.length} unverified PSA/PCGS certification(s)?`)) return;
+  let ok=0,fail=0,corrected=0;
+  for(let i=0;i<supported.length;i++){
+    const c=supported[i];
+    aAlert('arch-alert',`Verifying ${i+1} of ${supported.length}…`,'info');
+    try{
+      const r=await fetch(`${ARCH_FN}/archive-verify-cert?provider=${encodeURIComponent(c.provider)}&cert=${encodeURIComponent(c.cert_number)}`);
+      const d=await r.json();
+      if(d && d.ok){
+        const patch={verified_at:d.verified_at,raw:d.raw};
+        if(d.grade){ patch.grade=String(d.grade); if(c.grade && String(c.grade)!==String(d.grade)) corrected++; }
+        await aRest(`archive_certifications?id=eq.${c.id}`,{method:'PATCH',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(patch)});
+        ok++;
+      } else fail++;
+    }catch(e){ fail++; }
+    await new Promise(res=>setTimeout(res,400)); // gentle throttle on the grading API
+  }
+  aAlert('arch-alert',`Verified ${ok}`+(fail?`, ${fail} not found/unavailable`:'')+(corrected?`, ${corrected} grade correction(s)`:'')+'.','success');
+  if(_archEditingId) archLoadCert();
 }
 async function archAddCert(){
   if(archNeedSaved()) return;
