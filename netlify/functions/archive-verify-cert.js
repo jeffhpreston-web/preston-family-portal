@@ -34,8 +34,12 @@ async function verifyPSA(cert) {
   if (!token) return { error: 'PSA API token not configured (set PSA_API_TOKEN in Netlify).' };
   const r = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${encodeURIComponent(cert)}`,
     { headers: { Authorization: `bearer ${token}`, 'Content-Type': 'application/json' } });
+  if (r.status === 429) {
+    const ra = r.headers.get('retry-after');
+    return { error: 'PSA rate limit reached. Try again' + (ra ? ` in ${ra}s` : ' shortly') + '.', status: 429, retryAfter: ra ? parseInt(ra, 10) : null };
+  }
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) return { error: (data && data.message) || `PSA API error ${r.status}` };
+  if (!r.ok) return { error: (data && data.message) || `PSA API error ${r.status}`, status: r.status };
   const c = (data && data.PSACert) || data || {};
   const grade = c.CardGrade || c.GradeDescription || c.Grade || null;
   if (!grade && !c.CertNumber) return { error: 'No PSA record found for that cert number.' };
@@ -47,8 +51,12 @@ async function verifyPCGS(cert) {
   if (!key) return { error: 'PCGS verification not configured (add PCGS_API_KEY in Netlify).' };
   const r = await fetch(`https://api.pcgs.com/publicapi/coindetail/GetCoinFactsByCertNo/${encodeURIComponent(cert)}`,
     { headers: { Authorization: `Bearer ${key}` } });
+  if (r.status === 429) {
+    const ra = r.headers.get('retry-after');
+    return { error: 'PCGS rate limit reached. Try again' + (ra ? ` in ${ra}s` : ' shortly') + '.', status: 429, retryAfter: ra ? parseInt(ra, 10) : null };
+  }
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) return { error: `PCGS API error ${r.status}` };
+  if (!r.ok) return { error: `PCGS API error ${r.status}`, status: r.status };
   return { grade: data.Grade || data.grade || null, subject: data.Name || data.PCGSNo || null, raw: data };
 }
 
@@ -72,7 +80,7 @@ exports.handler = async (event) => {
     return json(500, { error: e.message }, event);
   }
 
-  if (res.error) return json(200, { ok: false, provider, cert_number: cert, error: res.error }, event);
+  if (res.error) return json(200, { ok: false, provider, cert_number: cert, error: res.error, status: res.status || null, retryAfter: res.retryAfter || null }, event);
   return json(200, {
     ok: true, provider, cert_number: cert,
     grade: res.grade, subject: res.subject || null,
