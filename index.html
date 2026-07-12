@@ -3875,13 +3875,21 @@ function archRenderList(){
     rows.map(it=>{
       const ini=(it.title||'?').replace(/[^A-Za-z]/g,'').substring(0,2).toUpperCase()||'&#9635;';
       const cn=it.archive_categories?aEsc(it.archive_categories.name):'&mdash;';
-      return `<tr><td><span class="arch-thumb">${ini}</span></td>`+
+      return `<tr><td><span class="arch-thumb" id="athumb-${it.id}">${ini}</span></td>`+
         `<td><strong>${aEsc(it.title)}</strong></td>`+
         `<td style="color:var(--grey)">${aEsc(it.accession_no||'—')}</td>`+
         `<td style="color:var(--grey)">${cn}</td>`+
         `<td><span class="arch-dot ${it.is_public?'pub':'priv'}"></span>${it.is_public?'Public':'Private'}</td>`+
         `<td><button class="btn-sm btn-approve" onclick="archEditItem('${it.id}')">Edit</button></td></tr>`;
     }).join('')+'</tbody></table>';
+  // swap in primary-photo thumbnails asynchronously
+  rows.filter(it=>it.primary_photo_path).forEach(async it=>{
+    const url=await archSignedUrl(it.primary_photo_path);
+    const sp=document.getElementById('athumb-'+it.id);
+    if(url&&sp){ const safe=url.replace(/'/g,"\\'");
+      sp.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in" onclick="archViewPhoto('${safe}')">`;
+      sp.style.color='transparent'; }
+  });
 }
 
 const AE_FIELDS=['accession_no','title','subcategory','short_desc','description','maker','origin_country','date_text','year_from','year_to','medium','dimensions','weight','condition','edition_info','held_by','generation','current_location','status','estimated_value','currency','tags'];
@@ -3960,16 +3968,29 @@ function archNeedSaved(){ if(!_archEditingId){ alert('Save the item first, then 
 function archToggleForm(k){ if(archNeedSaved()) return; document.getElementById('arch-'+k+'-form').classList.toggle('on'); }
 
 async function archSignedUrl(path){
+  if(!path) return null;
   const r=await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${ARCH_BUCKET}/${path}`,{method:'POST',headers:aHead({'Content-Type':'application/json'}),body:JSON.stringify({expiresIn:3600})});
-  if(!r.ok) return null; const j=await r.json(); return `${SUPABASE_URL}/storage/v1${j.signedURL}`;
+  if(!r.ok) return null; const j=await r.json(); const su=j.signedURL||j.signedUrl; return su?`${SUPABASE_URL}/storage/v1${su}`:null;
+}
+function archViewPhoto(url){
+  let ov=document.getElementById('arch-lightbox');
+  if(!ov){ ov=document.createElement('div'); ov.id='arch-lightbox';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+    ov.onclick=()=>{ov.style.display='none';};
+    ov.innerHTML='<img style="max-width:92%;max-height:92%;box-shadow:0 0 40px rgba(0,0,0,0.6);">';
+    document.body.appendChild(ov);
+  }
+  ov.querySelector('img').src=url; ov.style.display='flex';
 }
 async function archLoadPhotos(){
   const grid=document.getElementById('arch-photo-grid'); grid.innerHTML='';
   const photos=await aRest(`archive_photos?item_id=eq.${_archEditingId}&order=is_primary.desc,display_order.asc`);
+  if(!photos.length){ grid.innerHTML='<p style="color:var(--grey);font-size:13px;">No photos yet.</p>'; return; }
   for(const p of photos){
     const url=await archSignedUrl(p.storage_path);
     const d=document.createElement('div'); d.style.position='relative';
-    d.innerHTML=`<img class="arch-photo" src="${url||''}" alt="">`+
+    const safe=url?url.replace(/'/g,"\\'"):'';
+    d.innerHTML=(url?`<img class="arch-photo" src="${url}" alt="" style="cursor:zoom-in" onclick="archViewPhoto('${safe}')">`:'<div class="arch-photo" style="display:flex;align-items:center;justify-content:center;color:var(--grey);font-size:10px;">no preview</div>')+
       (p.is_primary?'<span class="pp-tag">Primary</span>':`<span class="pp-star" title="Make primary" onclick="archSetPrimary('${p.id}')">&#9734;</span>`)+
       `<span class="pp-x" title="Remove" onclick="archRemovePhoto('${p.id}')">&times;</span>`;
     grid.appendChild(d);
@@ -3984,18 +4005,18 @@ async function archUploadPhoto(file){
     const existing=await aRest(`archive_photos?item_id=eq.${_archEditingId}&select=id`);
     await aRest('archive_photos',{method:'POST',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify({item_id:_archEditingId,storage_path:path,is_primary:existing.length===0,bytes:file.size,content_type:file.type})});
     document.getElementById('arch-photo-input').value='';
-    archLoadPhotos();
+    archLoadPhotos(); archLoadItems();
   }catch(e){ aAlert('arch-ed-alert','Upload failed: '+e.message); }
 }
 async function archSetPrimary(id){
   await aRest(`archive_photos?item_id=eq.${_archEditingId}`,{method:'PATCH',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify({is_primary:false})});
   await aRest(`archive_photos?id=eq.${id}`,{method:'PATCH',headers:aHead({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify({is_primary:true})});
-  archLoadPhotos();
+  archLoadPhotos(); archLoadItems();
 }
 async function archRemovePhoto(id){
   if(!confirm('Remove this photo?')) return;
   await aRest(`archive_photos?id=eq.${id}`,{method:'DELETE',headers:aHead({Prefer:'return=minimal'})});
-  archLoadPhotos();
+  archLoadPhotos(); archLoadItems();
 }
 
 async function archLoadProv(){
