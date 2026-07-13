@@ -36,9 +36,23 @@ function fmtWait(sec) {
   return `in about ${Math.round(sec / 3600)} hour(s)`;
 }
 
+// Read an integration token: prefer the admin-managed value in the
+// integration_settings table (service-role read), fall back to the env var.
+async function getSecret(key, envName) {
+  const url = process.env.ARCHIVE_SUPABASE_URL, srv = process.env.ARCHIVE_SERVICE_ROLE_KEY;
+  if (url && srv) {
+    try {
+      const r = await fetch(`${url}/rest/v1/integration_settings?key=eq.${encodeURIComponent(key)}&select=value`,
+        { headers: { apikey: srv, Authorization: `Bearer ${srv}` } });
+      if (r.ok) { const rows = await r.json(); const v = rows && rows[0] && rows[0].value; if (v) return v; }
+    } catch { /* fall through to env */ }
+  }
+  return process.env[envName];
+}
+
 async function verifyPSA(cert) {
-  const token = process.env.PSA_API_TOKEN;
-  if (!token) return { error: 'PSA API token not configured (set PSA_API_TOKEN in Netlify).' };
+  const token = await getSecret('psa_api_token', 'PSA_API_TOKEN');
+  if (!token) return { error: 'PSA API token not configured. Add it in the portal Settings page (or set PSA_API_TOKEN).' };
   const r = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${encodeURIComponent(cert)}`,
     { headers: { Authorization: `bearer ${token}`, 'Content-Type': 'application/json' } });
   if (r.status === 429) {
@@ -54,8 +68,8 @@ async function verifyPSA(cert) {
 }
 
 async function verifyPCGS(cert) {
-  const key = process.env.PCGS_API_KEY;
-  if (!key) return { error: 'PCGS verification not configured (add PCGS_API_KEY in Netlify).' };
+  const key = await getSecret('pcgs_api_key', 'PCGS_API_KEY');
+  if (!key) return { error: 'PCGS verification not configured. Add a PCGS API key in the portal Settings page.' };
   const r = await fetch(`https://api.pcgs.com/publicapi/coindetail/GetCoinFactsByCertNo/${encodeURIComponent(cert)}`,
     { headers: { Authorization: `Bearer ${key}` } });
   if (r.status === 429) {

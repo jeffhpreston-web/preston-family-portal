@@ -715,6 +715,9 @@
         <div class="nav-item" onclick="showAdminSection('admin-activity')" id="anav-activity">
           <span class="nav-icon">&#9203;</span> Activity Log
         </div>
+        <div class="nav-item" onclick="showAdminSection('admin-settings')" id="anav-settings">
+          <span class="nav-icon">&#9881;</span> Settings
+        </div>
       </nav>
       <div style="padding:24px; border-top:1px solid var(--border); margin-top:auto;">
         <button class="btn-ghost" style="width:100%; font-size:10px;" onclick="handleSignOut()">Sign Out</button>
@@ -1032,6 +1035,41 @@
               <div id="arch-bulk-preview" style="overflow:auto;"></div>
               <button class="btn-primary" id="arch-bulk-import-btn" data-label="Import Items" style="font-size:10px;max-width:200px;margin-top:14px;" onclick="archBulkImport()">Import Items</button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="admin-settings" style="display:none">
+        <style>
+          .set-card{background:var(--surface);border:1px solid var(--border);padding:18px 20px;margin-bottom:14px;}
+          .set-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+          .set-name{font-size:15px;color:var(--white);}
+          .set-notes{color:var(--grey);font-size:12px;margin-top:3px;max-width:60ch;}
+          .set-pill{font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:2px 9px;border:1px solid;border-radius:2px;white-space:nowrap;}
+          .set-pill.on{color:#4e9a6a;border-color:#4e9a6a;}
+          .set-pill.off{color:var(--grey);border-color:var(--border-light);}
+          .set-row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;}
+          .set-row .form-input{margin:0;max-width:340px;}
+          .set-cat{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold);margin:22px 0 10px;}
+        </style>
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-sub">Manage API tokens and integration credentials</p>
+        </div>
+        <div id="settings-alert"></div>
+        <div style="background:rgba(184,151,42,0.08);border:1px solid rgba(184,151,42,0.3);padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--grey-light);">
+          &#128274; Tokens are stored securely and are <strong style="color:var(--white)">write-only</strong> &mdash; once saved they can&rsquo;t be viewed again here, only replaced. Enter API tokens or keys (not account passwords). Values are used only by secure server functions.
+        </div>
+        <div id="settings-list"><div class="loading">Loading&hellip;</div></div>
+
+        <div class="set-cat">Add a custom integration</div>
+        <div class="set-card">
+          <div class="set-row">
+            <input class="form-input" id="set-new-key" placeholder="key (e.g. ebay_api_token)" style="max-width:220px;">
+            <input class="form-input" id="set-new-label" placeholder="Display name" style="max-width:220px;">
+            <input class="form-input" id="set-new-value" type="password" placeholder="Token / key value" autocomplete="new-password" style="max-width:280px;">
+            <button class="btn-primary" style="font-size:10px;max-width:150px;" onclick="settingsAddCustom()">Add</button>
           </div>
         </div>
       </div>
@@ -3404,15 +3442,16 @@ function showMemberSection(id) {
 }
 
 function showAdminSection(id) {
-  ['admin-dashboard','admin-applications','admin-members','admin-contributions','admin-archive','admin-invite','admin-create-member','admin-activity'].forEach(s => {
+  ['admin-dashboard','admin-applications','admin-members','admin-contributions','admin-archive','admin-invite','admin-create-member','admin-activity','admin-settings'].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = s === id ? 'block' : 'none';
   });
-  ['anav-dashboard','anav-applications','anav-members','anav-contributions','anav-archive','anav-invite','anav-create-member','anav-activity'].forEach(n => {
+  ['anav-dashboard','anav-applications','anav-members','anav-contributions','anav-archive','anav-invite','anav-create-member','anav-activity','anav-settings'].forEach(n => {
     const el = document.getElementById(n);
     if (el) el.classList.toggle('active', n === 'anav-' + id.replace('admin-',''));
   });
   if (id === 'admin-archive' && !window._archiveLoaded) { window._archiveLoaded = true; archiveInit(); }
+  if (id === 'admin-settings') settingsInit();
 }
 
 function showAlert(containerId, message, type) {
@@ -4273,6 +4312,84 @@ async function archBulkImport(){
   setLoading('arch-bulk-import-btn',false);
 }
 var _archCats=[],_archCatById={},_archCatByName={},_archItems=[],_archEditingId=null;
+
+// ================================================================
+// SETTINGS — admin-managed integration tokens (write-only from UI)
+// ================================================================
+async function settingsInit(){
+  const el=document.getElementById('settings-list');
+  let rows;
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/integration_status`,{method:'POST',headers:aHead({'Content-Type':'application/json'}),body:'{}'});
+    if(!r.ok) throw new Error(await r.text());
+    rows=await r.json();
+  }catch(e){
+    el.innerHTML='<div class="empty-state"><p>Settings not available yet. Run migration <code>006_integration_settings.sql</code> in Supabase to enable.</p><p style="color:var(--grey);font-size:12px;margin-top:8px;">'+aEsc(e.message)+'</p></div>';
+    return;
+  }
+  const labels={grading:'Grading services',crm:'CRM',other:'Other'};
+  const byCat={};
+  rows.forEach(r=>{ const c=r.category||'other'; (byCat[c]=byCat[c]||[]).push(r); });
+  let html='';
+  Object.keys(byCat).forEach(cat=>{
+    html+=`<div class="set-cat">${aEsc(labels[cat]||cat)}</div>`;
+    byCat[cat].forEach(r=>{
+      const status=r.is_set
+        ? `<span class="set-pill on">&#10003; Configured</span>`
+        : `<span class="set-pill off">Not set</span>`;
+      const when=r.is_set&&r.updated_at?`<span style="color:var(--grey);font-size:11px;">updated ${new Date(r.updated_at).toLocaleDateString()}</span>`:'';
+      const k=aEsc(r.key);
+      html+=`<div class="set-card"><div class="set-top">`+
+        `<div><div class="set-name">${aEsc(r.label)}</div><div class="set-notes">${aEsc(r.notes||'')}</div></div>`+
+        `<div style="display:flex;gap:10px;align-items:center;">${when}${status}</div></div>`+
+        `<div class="set-row">`+
+          `<input class="form-input" type="password" id="setv-${k}" placeholder="${r.is_set?'Enter a new value to replace':'Paste token / key'}" autocomplete="new-password">`+
+          `<button class="btn-primary" style="font-size:10px;max-width:120px;" onclick="settingsSave('${k}')">Save</button>`+
+          (r.is_set?`<button class="btn-ghost" style="font-size:10px;" onclick="settingsClear('${k}')">Clear</button>`:'')+
+        `</div></div>`;
+    });
+  });
+  el.innerHTML=html || '<p style="color:var(--grey);font-size:13px;">No integrations defined.</p>';
+}
+async function settingsUpsert(row){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/integration_settings?on_conflict=key`,{
+    method:'POST',
+    headers:aHead({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'}),
+    body:JSON.stringify(row)
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
+async function settingsSave(key){
+  const inp=document.getElementById('setv-'+key);
+  const val=(inp.value||'').trim();
+  if(!val){ aAlert('settings-alert','Enter a value to save.'); return; }
+  try{
+    await settingsUpsert({key,value:val,updated_by:currentUser.id,updated_at:new Date().toISOString()});
+    inp.value='';
+    aAlert('settings-alert','Saved. The token is stored securely and won’t be shown again.','success');
+    settingsInit();
+  }catch(e){ aAlert('settings-alert','Save failed: '+e.message); }
+}
+async function settingsClear(key){
+  if(!confirm('Clear this token?')) return;
+  try{
+    await settingsUpsert({key,value:null,updated_by:currentUser.id,updated_at:new Date().toISOString()});
+    aAlert('settings-alert','Cleared.','success');
+    settingsInit();
+  }catch(e){ aAlert('settings-alert','Clear failed: '+e.message); }
+}
+async function settingsAddCustom(){
+  const key=(document.getElementById('set-new-key').value||'').trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');
+  const label=(document.getElementById('set-new-label').value||'').trim();
+  const value=(document.getElementById('set-new-value').value||'').trim();
+  if(!key||!label){ aAlert('settings-alert','Key and display name are required.'); return; }
+  try{
+    await settingsUpsert({key,label,category:'other',value:value||null,updated_by:currentUser.id,updated_at:new Date().toISOString()});
+    ['set-new-key','set-new-label','set-new-value'].forEach(id=>document.getElementById(id).value='');
+    aAlert('settings-alert','Integration added.','success');
+    settingsInit();
+  }catch(e){ aAlert('settings-alert','Add failed: '+e.message); }
+}
 </script>
 
 <div id="collection-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; overflow-y:auto;">
