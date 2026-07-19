@@ -48,7 +48,7 @@ create or replace function public.integration_status()
 returns table (key text, label text, category text, notes text, is_set boolean, updated_at timestamptz)
 language plpgsql security definer set search_path = public as $$
 begin
-  if public.current_access_level() <> 'admin' then return; end if;
+  if coalesce(public.current_access_level(), '') <> 'admin' then return; end if;
   return query
     select s.key, s.label, s.category, s.notes,
            (s.value is not null and s.value <> '') as is_set, s.updated_at
