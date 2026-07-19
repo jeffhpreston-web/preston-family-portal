@@ -1120,6 +1120,19 @@
             <div class="set-cat" style="margin-top:0;" id="vault-form-title">Add account</div>
             <div class="form-group"><label class="form-label">Site</label>
               <input class="form-input" id="vault-site" placeholder="e.g. PSA, PCGS, Alt, Fanatics" style="max-width:340px;"></div>
+            <div class="form-group"><label class="form-label">Collection Category</label>
+              <select class="form-input select-input" id="vault-cat" style="max-width:340px;"><option value="">&mdash;</option></select></div>
+            <div class="form-group"><label class="form-label">Account Category</label>
+              <select class="form-input select-input" id="vault-acct" style="max-width:340px;">
+                <option value="">&mdash;</option>
+                <option>Collector</option>
+                <option>Grader</option>
+                <option>Vault</option>
+                <option>Auction House</option>
+                <option>Retailer</option>
+                <option>Re-shipper</option>
+                <option>Submitter</option>
+              </select></div>
             <div class="form-group"><label class="form-label">Login Name</label>
               <input class="form-input" id="vault-login" placeholder="Username on that site" autocomplete="off" style="max-width:340px;"></div>
             <div class="form-group"><label class="form-label">Associated Email</label>
@@ -1132,6 +1145,8 @@
               </div>
               <div id="vault-pw-hint" style="color:var(--grey);font-size:11px;margin-top:6px;display:none;">Leave blank to keep the current password.</div>
             </div>
+            <div class="form-group"><label class="form-label">Notes</label>
+              <textarea class="form-input form-textarea" id="vault-notes" placeholder="Free-text notes about this account (security questions hint, membership level, etc.)" style="max-width:520px;min-height:70px;"></textarea></div>
             <div class="set-row">
               <button class="btn-primary" style="font-size:10px;max-width:160px;" id="vault-save-btn" data-label="Save Account" onclick="vaultSaveForm()">Save Account</button>
               <button class="btn-ghost" style="font-size:10px;" onclick="vaultCloseForm()">Cancel</button>
@@ -4667,16 +4682,40 @@ async function vaultRpc(fn, body){
   return txt?JSON.parse(txt):null;
 }
 
+async function vaultEnsureCats(){
+  if(_archCats.length) return;
+  try{
+    _archCats = await aRest('archive_categories?select=id,name,slug&order=display_order.asc');
+    _archCatById={}; _archCatByName={};
+    _archCats.forEach(c=>{ _archCatById[c.id]=c; _archCatByName[c.name.toLowerCase()]=c.id; _archCatByName[c.slug]=c.id; });
+  }catch(e){ /* dropdown stays empty; category is optional */ }
+}
+
+function vaultFillCatSelect(){
+  const sel=document.getElementById('vault-cat');
+  sel.innerHTML='<option value="">&mdash;</option>'+
+    _archCats.map(c=>'<option value="'+aEsc(c.id)+'">'+aEsc(c.name)+'</option>').join('');
+}
+
+function vaultNoteCell(c){
+  const n=c.notes||'';
+  if(!n) return '<span style="color:var(--grey)">—</span>';
+  const short=n.length>80?n.slice(0,80)+'…':n;
+  return '<span style="color:var(--grey)" title="'+aEsc(n)+'">'+aEsc(short)+'</span>';
+}
+
 async function vaultLoad(){
   const el=document.getElementById('vault-list');
   try{
-    _vaultRows=await vaultRpc('vault_list');
+    const [rows]=await Promise.all([vaultRpc('vault_list'), vaultEnsureCats()]);
+    _vaultRows=rows;
   }catch(e){
-    el.innerHTML='<div class="empty-state"><p>Password Vault not available yet. Run migration <code>007_password_vault.sql</code> in Supabase to enable.</p>'+
+    el.innerHTML='<div class="empty-state"><p>Password Vault not available yet. Run migrations <code>007</code>&ndash;<code>009</code> in Supabase to enable.</p>'+
       '<p style="color:var(--grey);font-size:12px;margin-top:8px;">'+aEsc(e.message)+'</p></div>';
     document.getElementById('vault-count').textContent='';
     return;
   }
+  vaultFillCatSelect();
   _vaultRevealed={};
   Object.values(_vaultHideTimers).forEach(clearTimeout); _vaultHideTimers={};
   document.getElementById('vault-count').textContent=_vaultRows.length+' account'+(_vaultRows.length===1?'':'s');
@@ -4685,12 +4724,15 @@ async function vaultLoad(){
     return;
   }
   el.innerHTML='<div style="overflow-x:auto;"><table class="data-table">'+
-    '<thead><tr><th>Site</th><th>Login Name</th><th>Email</th><th>Password</th><th>Last Updated</th><th>Updated By</th><th></th></tr></thead>'+
+    '<thead><tr><th>Site</th><th>Collection Category</th><th>Account Category</th><th>Login Name</th><th>Email</th><th>Password</th><th>Notes</th><th>Last Updated</th><th>Updated By</th><th></th></tr></thead>'+
     '<tbody>'+_vaultRows.map(c=>'<tr id="vault-row-'+c.id+'">'+
       '<td style="color:var(--white)">'+aEsc(c.site)+'</td>'+
+      '<td style="color:var(--grey)">'+aEsc(c.collection_category||'—')+'</td>'+
+      '<td style="color:var(--grey)">'+aEsc(c.account_category||'—')+'</td>'+
       '<td style="color:var(--grey)">'+aEsc(c.login_name||'—')+'</td>'+
       '<td style="color:var(--grey)">'+aEsc(c.email||'—')+'</td>'+
       '<td id="vault-pw-'+c.id+'">'+vaultPwCell(c)+'</td>'+
+      '<td style="max-width:220px;">'+vaultNoteCell(c)+'</td>'+
       '<td style="color:var(--grey)">'+new Date(c.updated_at).toLocaleDateString()+'</td>'+
       '<td style="color:var(--grey)">'+aEsc(c.updated_by_name||'—')+'</td>'+
       '<td style="white-space:nowrap;">'+
@@ -4748,7 +4790,7 @@ function vaultCopy(id){
 function vaultNew(){
   _vaultEditingId=null;
   document.getElementById('vault-form-title').textContent='Add account';
-  ['vault-site','vault-login','vault-email','vault-password'].forEach(i=>document.getElementById(i).value='');
+  ['vault-site','vault-cat','vault-acct','vault-login','vault-email','vault-password','vault-notes'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('vault-pw-hint').style.display='none';
   const pw=document.getElementById('vault-password');
   pw.type='password'; document.getElementById('vault-pw-toggle').textContent='Show';
@@ -4762,9 +4804,12 @@ function vaultEdit(id){
   _vaultEditingId=id;
   document.getElementById('vault-form-title').textContent='Edit account — '+c.site;
   document.getElementById('vault-site').value=c.site||'';
+  document.getElementById('vault-cat').value=c.collection_category_id||'';
+  document.getElementById('vault-acct').value=c.account_category||'';
   document.getElementById('vault-login').value=c.login_name||'';
   document.getElementById('vault-email').value=c.email||'';
   document.getElementById('vault-password').value='';
+  document.getElementById('vault-notes').value=c.notes||'';
   document.getElementById('vault-pw-hint').style.display=c.has_password?'block':'none';
   const pw=document.getElementById('vault-password');
   pw.type='password'; document.getElementById('vault-pw-toggle').textContent='Show';
@@ -4805,7 +4850,10 @@ async function vaultSaveForm(){
       p_site:site,
       p_login_name:(document.getElementById('vault-login').value||'').trim(),
       p_email:(document.getElementById('vault-email').value||'').trim(),
-      p_password:document.getElementById('vault-password').value||''
+      p_password:document.getElementById('vault-password').value||'',
+      p_collection_category_id:document.getElementById('vault-cat').value||null,
+      p_account_category:document.getElementById('vault-acct').value||null,
+      p_notes:(document.getElementById('vault-notes').value||'').trim()
     });
     aAlert('vault-alert',(_vaultEditingId?'Account updated.':'Account added.'),'success');
     vaultCloseForm();
