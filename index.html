@@ -712,9 +712,6 @@
         <div class="nav-item" onclick="showAdminSection('admin-create-member')" id="anav-create-member">
           <span class="nav-icon">&#43;</span> Create Member
         </div>
-        <div class="nav-item" onclick="showAdminSection('admin-activity')" id="anav-activity">
-          <span class="nav-icon">&#9203;</span> Activity Log
-        </div>
         <div class="nav-item" onclick="showAdminSection('admin-settings')" id="anav-settings">
           <span class="nav-icon">&#9881;</span> Settings
         </div>
@@ -815,15 +812,6 @@
           </div>
           <button class="btn-primary" id="create-member-btn" data-label="Create Account" style="max-width:260px;" onclick="handleCreateMember()">Create Account</button>
         </div>
-      </div>
-
-      <!-- ACTIVITY -->
-      <div id="admin-activity" style="display:none">
-        <div class="page-header">
-          <h1 class="page-title">Activity Log</h1>
-          <p class="page-sub">Recent portal activity</p>
-        </div>
-        <div id="activity-list"><div class="loading">Loading...</div></div>
       </div>
 
       <!-- ARCHIVE -->
@@ -1052,24 +1040,64 @@
           .set-row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;}
           .set-row .form-input{margin:0;max-width:340px;}
           .set-cat{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold);margin:22px 0 10px;}
+          .set-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin:0 0 22px;flex-wrap:wrap;}
+          .set-tab{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--grey);padding:12px 16px;
+            cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+          .set-tab.on{color:var(--white);border-bottom-color:var(--gold);}
+          .set-panel{display:none;}.set-panel.on{display:block;}
+          .set-soon{background:var(--surface);border:1px solid var(--border);padding:48px 28px;text-align:center;}
+          .set-soon .ss-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--white);margin-bottom:8px;}
+          .set-soon .ss-sub{color:var(--grey);font-size:12px;}
         </style>
         <div class="page-header">
           <h1 class="page-title">Settings</h1>
-          <p class="page-sub">Manage API tokens and integration credentials</p>
+          <p class="page-sub">Portal configuration &amp; administration</p>
         </div>
-        <div id="settings-alert"></div>
-        <div style="background:rgba(184,151,42,0.08);border:1px solid rgba(184,151,42,0.3);padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--grey-light);">
-          &#128274; Tokens are stored securely and are <strong style="color:var(--white)">write-only</strong> &mdash; once saved they can&rsquo;t be viewed again here, only replaced. Enter API tokens or keys (not account passwords). Values are used only by secure server functions.
+        <div class="set-tabs">
+          <div class="set-tab" data-tab="connection" onclick="settingsTab('connection')">Connection Status</div>
+          <div class="set-tab on" data-tab="apis" onclick="settingsTab('apis')">Manage APIs</div>
+          <div class="set-tab" data-tab="activity" onclick="settingsTab('activity')">Activity Logs</div>
+          <div class="set-tab" data-tab="vault" onclick="settingsTab('vault')">Password Vault</div>
         </div>
-        <div id="settings-list"><div class="loading">Loading&hellip;</div></div>
 
-        <div class="set-cat">Add a custom integration</div>
-        <div class="set-card">
-          <div class="set-row">
-            <input class="form-input" id="set-new-key" placeholder="key (e.g. ebay_api_token)" style="max-width:220px;">
-            <input class="form-input" id="set-new-label" placeholder="Display name" style="max-width:220px;">
-            <input class="form-input" id="set-new-value" type="password" placeholder="Token / key value" autocomplete="new-password" style="max-width:280px;">
-            <button class="btn-primary" style="font-size:10px;max-width:150px;" onclick="settingsAddCustom()">Add</button>
+        <!-- CONNECTION STATUS (placeholder) -->
+        <div id="set-panel-connection" class="set-panel">
+          <div class="set-soon">
+            <div class="ss-title">Connection Status</div>
+            <div class="ss-sub">Live health checks for Supabase, Netlify functions and connected services are coming soon.</div>
+          </div>
+        </div>
+
+        <!-- MANAGE APIS -->
+        <div id="set-panel-apis" class="set-panel on">
+          <div id="settings-alert"></div>
+          <div style="background:rgba(184,151,42,0.08);border:1px solid rgba(184,151,42,0.3);padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--grey-light);">
+            &#128274; Tokens are stored securely and are <strong style="color:var(--white)">write-only</strong> &mdash; once saved they can&rsquo;t be viewed again here, only replaced. Enter API tokens or keys (not account passwords). Values are used only by secure server functions.
+          </div>
+          <div id="settings-list"><div class="loading">Loading&hellip;</div></div>
+
+          <div class="set-cat">Add a custom integration</div>
+          <div class="set-card">
+            <div class="set-row">
+              <input class="form-input" id="set-new-key" placeholder="key (e.g. ebay_api_token)" style="max-width:220px;">
+              <input class="form-input" id="set-new-label" placeholder="Display name" style="max-width:220px;">
+              <input class="form-input" id="set-new-value" type="password" placeholder="Token / key value" autocomplete="new-password" style="max-width:280px;">
+              <button class="btn-primary" style="font-size:10px;max-width:150px;" onclick="settingsAddCustom()">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIVITY LOGS -->
+        <div id="set-panel-activity" class="set-panel">
+          <p class="page-sub" style="margin-bottom:18px;">Recent portal activity</p>
+          <div id="activity-list"><div class="loading">Loading...</div></div>
+        </div>
+
+        <!-- PASSWORD VAULT (placeholder) -->
+        <div id="set-panel-vault" class="set-panel">
+          <div class="set-soon">
+            <div class="ss-title">Password Vault</div>
+            <div class="ss-sub">Secure shared-credential storage for family administrators is coming soon.</div>
           </div>
         </div>
       </div>
@@ -3442,11 +3470,11 @@ function showMemberSection(id) {
 }
 
 function showAdminSection(id) {
-  ['admin-dashboard','admin-applications','admin-members','admin-contributions','admin-archive','admin-invite','admin-create-member','admin-activity','admin-settings'].forEach(s => {
+  ['admin-dashboard','admin-applications','admin-members','admin-contributions','admin-archive','admin-invite','admin-create-member','admin-settings'].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = s === id ? 'block' : 'none';
   });
-  ['anav-dashboard','anav-applications','anav-members','anav-contributions','anav-archive','anav-invite','anav-create-member','anav-activity','anav-settings'].forEach(n => {
+  ['anav-dashboard','anav-applications','anav-members','anav-contributions','anav-archive','anav-invite','anav-create-member','anav-settings'].forEach(n => {
     const el = document.getElementById(n);
     if (el) el.classList.toggle('active', n === 'anav-' + id.replace('admin-',''));
   });
@@ -4314,9 +4342,21 @@ async function archBulkImport(){
 var _archCats=[],_archCatById={},_archCatByName={},_archItems=[],_archEditingId=null;
 
 // ================================================================
-// SETTINGS — admin-managed integration tokens (write-only from UI)
+// SETTINGS — sub-tabs + admin-managed integration tokens
 // ================================================================
-async function settingsInit(){
+function settingsTab(tab){
+  document.querySelectorAll('#admin-settings .set-tab').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  ['connection','apis','activity','vault'].forEach(t=>{
+    const p=document.getElementById('set-panel-'+t);
+    if(p) p.classList.toggle('on', t===tab);
+  });
+  if(tab==='apis') settingsLoadApis();
+  if(tab==='activity') loadActivity();
+}
+function settingsInit(){
+  settingsTab(document.querySelector('#admin-settings .set-tab.on')?.dataset.tab || 'apis');
+}
+async function settingsLoadApis(){
   const el=document.getElementById('settings-list');
   let rows;
   try{
