@@ -1106,12 +1106,38 @@
           <div id="activity-list"><div class="loading">Loading...</div></div>
         </div>
 
-        <!-- PASSWORD VAULT (placeholder) -->
+        <!-- PASSWORD VAULT -->
         <div id="set-panel-vault" class="set-panel">
-          <div class="set-soon">
-            <div class="ss-title">Password Vault</div>
-            <div class="ss-sub">Secure shared-credential storage for family administrators is coming soon.</div>
+          <div id="vault-alert"></div>
+          <div style="background:rgba(184,151,42,0.08);border:1px solid rgba(184,151,42,0.3);padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--grey-light);">
+            &#128274; Shared accounts for family administrators. Passwords are stored <strong style="color:var(--white)">encrypted</strong> and hidden by default &mdash; revealing one is recorded in the Activity Log.
           </div>
+          <div class="set-row" style="margin:0 0 16px;justify-content:space-between;">
+            <span id="vault-count" style="color:var(--grey);font-size:11px;"></span>
+            <button class="btn-primary" style="font-size:10px;max-width:170px;" onclick="vaultNew()">+ Add Account</button>
+          </div>
+          <div id="vault-form" class="set-card" style="display:none;">
+            <div class="set-cat" style="margin-top:0;" id="vault-form-title">Add account</div>
+            <div class="form-group"><label class="form-label">Site</label>
+              <input class="form-input" id="vault-site" placeholder="e.g. PSA, PCGS, Alt, Fanatics" style="max-width:340px;"></div>
+            <div class="form-group"><label class="form-label">Login Name</label>
+              <input class="form-input" id="vault-login" placeholder="Username on that site" autocomplete="off" style="max-width:340px;"></div>
+            <div class="form-group"><label class="form-label">Associated Email</label>
+              <input class="form-input" id="vault-email" type="email" placeholder="account@email.com" autocomplete="off" style="max-width:340px;"></div>
+            <div class="form-group"><label class="form-label">Password</label>
+              <div class="set-row" style="margin-top:0;">
+                <input class="form-input" id="vault-password" type="password" placeholder="Password" autocomplete="new-password" style="max-width:340px;">
+                <button class="btn-ghost" style="font-size:10px;" onclick="vaultTogglePw()" id="vault-pw-toggle">Show</button>
+                <button class="btn-ghost" style="font-size:10px;" onclick="vaultGenPw()">Generate</button>
+              </div>
+              <div id="vault-pw-hint" style="color:var(--grey);font-size:11px;margin-top:6px;display:none;">Leave blank to keep the current password.</div>
+            </div>
+            <div class="set-row">
+              <button class="btn-primary" style="font-size:10px;max-width:160px;" id="vault-save-btn" data-label="Save Account" onclick="vaultSaveForm()">Save Account</button>
+              <button class="btn-ghost" style="font-size:10px;" onclick="vaultCloseForm()">Cancel</button>
+            </div>
+          </div>
+          <div id="vault-list"><div class="loading">Loading&hellip;</div></div>
         </div>
       </div>
 
@@ -4366,6 +4392,7 @@ function settingsTab(tab){
   if(tab==='apis') settingsLoadApis();
   if(tab==='activity') loadActivity();
   if(tab==='connection') connRun();
+  if(tab==='vault') vaultLoad();
 }
 function settingsInit(){
   settingsTab(document.querySelector('#admin-settings .set-tab.on')?.dataset.tab || 'apis');
@@ -4618,6 +4645,183 @@ async function connTest(provider, cert, key){
   }else{
     csSet(id,'down',aEsc(d.error||'Connection test failed.'),ms);
   }
+}
+
+// ================================================================
+// PASSWORD VAULT — shared admin credentials (Settings sub-tab)
+// All access goes through admin-guarded RPCs (007_password_vault.sql);
+// passwords come back only via vault_reveal, which is activity-logged.
+// ================================================================
+let _vaultRows=[], _vaultEditingId=null, _vaultRevealed={}, _vaultHideTimers={};
+
+async function vaultRpc(fn, body){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`,{
+    method:'POST', headers:aHead({'Content-Type':'application/json'}),
+    body:JSON.stringify(body||{})
+  });
+  const txt=await r.text();
+  if(!r.ok){
+    let msg=txt; try{ msg=JSON.parse(txt).message||txt; }catch(e){}
+    throw new Error(msg);
+  }
+  return txt?JSON.parse(txt):null;
+}
+
+async function vaultLoad(){
+  const el=document.getElementById('vault-list');
+  try{
+    _vaultRows=await vaultRpc('vault_list');
+  }catch(e){
+    el.innerHTML='<div class="empty-state"><p>Password Vault not available yet. Run migration <code>007_password_vault.sql</code> in Supabase to enable.</p>'+
+      '<p style="color:var(--grey);font-size:12px;margin-top:8px;">'+aEsc(e.message)+'</p></div>';
+    document.getElementById('vault-count').textContent='';
+    return;
+  }
+  _vaultRevealed={};
+  Object.values(_vaultHideTimers).forEach(clearTimeout); _vaultHideTimers={};
+  document.getElementById('vault-count').textContent=_vaultRows.length+' account'+(_vaultRows.length===1?'':'s');
+  if(!_vaultRows.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128273;</div><p>No accounts stored yet. Use &ldquo;Add Account&rdquo; to save the first one.</p></div>';
+    return;
+  }
+  el.innerHTML='<div style="overflow-x:auto;"><table class="data-table">'+
+    '<thead><tr><th>Site</th><th>Login Name</th><th>Email</th><th>Password</th><th>Last Updated</th><th>Updated By</th><th></th></tr></thead>'+
+    '<tbody>'+_vaultRows.map(c=>'<tr id="vault-row-'+c.id+'">'+
+      '<td style="color:var(--white)">'+aEsc(c.site)+'</td>'+
+      '<td style="color:var(--grey)">'+aEsc(c.login_name||'—')+'</td>'+
+      '<td style="color:var(--grey)">'+aEsc(c.email||'—')+'</td>'+
+      '<td id="vault-pw-'+c.id+'">'+vaultPwCell(c)+'</td>'+
+      '<td style="color:var(--grey)">'+new Date(c.updated_at).toLocaleDateString()+'</td>'+
+      '<td style="color:var(--grey)">'+aEsc(c.updated_by_name||'—')+'</td>'+
+      '<td style="white-space:nowrap;">'+
+        '<button class="btn-ghost" style="font-size:10px;" onclick="vaultEdit(\''+c.id+'\')">Edit</button> '+
+        '<button class="btn-ghost" style="font-size:10px;color:#e74c3c;" onclick="vaultDelete(\''+c.id+'\')">Delete</button>'+
+      '</td>'+
+    '</tr>').join('')+'</tbody></table></div>';
+}
+
+function vaultPwCell(c){
+  if(!c.has_password) return '<span style="color:var(--grey);font-size:11px;">not set</span>';
+  const pw=_vaultRevealed[c.id];
+  if(pw===undefined)
+    return '<span style="letter-spacing:2px;color:var(--grey);">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span> '+
+      '<button class="btn-ghost" style="font-size:10px;" onclick="vaultReveal(\''+c.id+'\')">Reveal</button>';
+  return '<code style="font-size:12px;color:var(--gold-light);word-break:break-all;">'+aEsc(pw)+'</code> '+
+    '<button class="btn-ghost" style="font-size:10px;" onclick="vaultCopy(\''+c.id+'\')">Copy</button> '+
+    '<button class="btn-ghost" style="font-size:10px;" onclick="vaultHide(\''+c.id+'\')">Hide</button>';
+}
+
+async function vaultReveal(id){
+  const cell=document.getElementById('vault-pw-'+id);
+  if(cell) cell.innerHTML='<span style="color:var(--grey);font-size:11px;">Revealing&hellip;</span>';
+  try{
+    const pw=await vaultRpc('vault_reveal',{p_id:id});
+    _vaultRevealed[id]=pw||'';
+    const c=_vaultRows.find(x=>x.id===id);
+    if(cell&&c) cell.innerHTML=vaultPwCell(c);
+    clearTimeout(_vaultHideTimers[id]);
+    _vaultHideTimers[id]=setTimeout(()=>vaultHide(id),30000);
+  }catch(e){
+    aAlert('vault-alert','Reveal failed: '+e.message);
+    const c=_vaultRows.find(x=>x.id===id);
+    if(cell&&c) cell.innerHTML=vaultPwCell(c);
+  }
+}
+
+function vaultHide(id){
+  delete _vaultRevealed[id];
+  clearTimeout(_vaultHideTimers[id]); delete _vaultHideTimers[id];
+  const cell=document.getElementById('vault-pw-'+id);
+  const c=_vaultRows.find(x=>x.id===id);
+  if(cell&&c) cell.innerHTML=vaultPwCell(c);
+}
+
+function vaultCopy(id){
+  const pw=_vaultRevealed[id];
+  if(pw===undefined) return;
+  navigator.clipboard.writeText(pw).then(
+    ()=>aAlert('vault-alert','Password copied to clipboard.','success'),
+    ()=>aAlert('vault-alert','Could not copy to clipboard.')
+  );
+}
+
+function vaultNew(){
+  _vaultEditingId=null;
+  document.getElementById('vault-form-title').textContent='Add account';
+  ['vault-site','vault-login','vault-email','vault-password'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('vault-pw-hint').style.display='none';
+  const pw=document.getElementById('vault-password');
+  pw.type='password'; document.getElementById('vault-pw-toggle').textContent='Show';
+  document.getElementById('vault-form').style.display='block';
+  document.getElementById('vault-site').focus();
+}
+
+function vaultEdit(id){
+  const c=_vaultRows.find(x=>x.id===id);
+  if(!c) return;
+  _vaultEditingId=id;
+  document.getElementById('vault-form-title').textContent='Edit account — '+c.site;
+  document.getElementById('vault-site').value=c.site||'';
+  document.getElementById('vault-login').value=c.login_name||'';
+  document.getElementById('vault-email').value=c.email||'';
+  document.getElementById('vault-password').value='';
+  document.getElementById('vault-pw-hint').style.display=c.has_password?'block':'none';
+  const pw=document.getElementById('vault-password');
+  pw.type='password'; document.getElementById('vault-pw-toggle').textContent='Show';
+  document.getElementById('vault-form').style.display='block';
+  document.getElementById('vault-form').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function vaultCloseForm(){
+  document.getElementById('vault-form').style.display='none';
+  document.getElementById('vault-password').value='';
+  _vaultEditingId=null;
+}
+
+function vaultTogglePw(){
+  const pw=document.getElementById('vault-password');
+  const btn=document.getElementById('vault-pw-toggle');
+  const show=pw.type==='password';
+  pw.type=show?'text':'password';
+  btn.textContent=show?'Hide':'Show';
+}
+
+function vaultGenPw(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*-_=+';
+  const buf=new Uint32Array(20);
+  crypto.getRandomValues(buf);
+  document.getElementById('vault-password').value=Array.from(buf,n=>chars[n%chars.length]).join('');
+  const pw=document.getElementById('vault-password');
+  pw.type='text'; document.getElementById('vault-pw-toggle').textContent='Hide';
+}
+
+async function vaultSaveForm(){
+  const site=(document.getElementById('vault-site').value||'').trim();
+  if(!site){ aAlert('vault-alert','Site is required.'); return; }
+  setLoading('vault-save-btn',true);
+  try{
+    await vaultRpc('vault_save',{
+      p_id:_vaultEditingId,
+      p_site:site,
+      p_login_name:(document.getElementById('vault-login').value||'').trim(),
+      p_email:(document.getElementById('vault-email').value||'').trim(),
+      p_password:document.getElementById('vault-password').value||''
+    });
+    aAlert('vault-alert',(_vaultEditingId?'Account updated.':'Account added.'),'success');
+    vaultCloseForm();
+    await vaultLoad();
+  }catch(e){ aAlert('vault-alert','Save failed: '+e.message); }
+  setLoading('vault-save-btn',false);
+}
+
+async function vaultDelete(id){
+  const c=_vaultRows.find(x=>x.id===id);
+  if(!confirm('Delete the stored account for "'+(c?c.site:'this site')+'"? This cannot be undone.')) return;
+  try{
+    await vaultRpc('vault_delete',{p_id:id});
+    aAlert('vault-alert','Account deleted.','success');
+    await vaultLoad();
+  }catch(e){ aAlert('vault-alert','Delete failed: '+e.message); }
 }
 </script>
 
