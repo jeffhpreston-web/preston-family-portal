@@ -1048,6 +1048,15 @@
           .set-soon{background:var(--surface);border:1px solid var(--border);padding:48px 28px;text-align:center;}
           .set-soon .ss-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--white);margin-bottom:8px;}
           .set-soon .ss-sub{color:var(--grey);font-size:12px;}
+          .set-pill.warn{color:#d4a017;border-color:#d4a017;}
+          .set-pill.down{color:#e74c3c;border-color:#c0392b;}
+          .cs-row{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);padding:14px 18px;margin-bottom:10px;flex-wrap:wrap;}
+          .cs-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+          .cs-dot.ok{background:#4e9a6a;}.cs-dot.warn{background:#d4a017;}.cs-dot.down{background:#c0392b;}.cs-dot.idle{background:var(--grey);}
+          .cs-name{font-size:14px;color:var(--white);min-width:230px;}
+          .cs-name .cs-sub{display:block;color:var(--grey);font-size:11px;margin-top:2px;}
+          .cs-note{color:var(--grey);font-size:12px;flex:1;min-width:200px;}
+          .cs-ms{color:var(--grey);font-size:11px;white-space:nowrap;}
         </style>
         <div class="page-header">
           <h1 class="page-title">Settings</h1>
@@ -1060,12 +1069,16 @@
           <div class="set-tab" data-tab="vault" onclick="settingsTab('vault')">Password Vault</div>
         </div>
 
-        <!-- CONNECTION STATUS (placeholder) -->
+        <!-- CONNECTION STATUS -->
         <div id="set-panel-connection" class="set-panel">
-          <div class="set-soon">
-            <div class="ss-title">Connection Status</div>
-            <div class="ss-sub">Live health checks for Supabase, Netlify functions and connected services are coming soon.</div>
+          <div class="set-row" style="margin:0 0 4px;justify-content:space-between;">
+            <span id="cs-checked" style="color:var(--grey);font-size:11px;"></span>
+            <button class="btn-ghost" style="font-size:10px;" onclick="connRun()">Re-run checks</button>
           </div>
+          <div class="set-cat" style="margin-top:6px;">Web Application Status</div>
+          <div id="cs-web"></div>
+          <div class="set-cat">API Status</div>
+          <div id="cs-api"><div class="loading">Loading&hellip;</div></div>
         </div>
 
         <!-- MANAGE APIS -->
@@ -4352,6 +4365,7 @@ function settingsTab(tab){
   });
   if(tab==='apis') settingsLoadApis();
   if(tab==='activity') loadActivity();
+  if(tab==='connection') connRun();
 }
 function settingsInit(){
   settingsTab(document.querySelector('#admin-settings .set-tab.on')?.dataset.tab || 'apis');
@@ -4429,6 +4443,181 @@ async function settingsAddCustom(){
     aAlert('settings-alert','Integration added.','success');
     settingsInit();
   }catch(e){ aAlert('settings-alert','Add failed: '+e.message); }
+}
+
+// ================================================================
+// CONNECTION STATUS — live health checks (Settings sub-tab)
+// ================================================================
+const CS_TIMEOUT = 10000;
+const NETLIFY_SITE = 'https://vermillion-bonbon-d04317.netlify.app';
+
+async function csFetch(url, opts){
+  const t0 = performance.now();
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), CS_TIMEOUT);
+  try{
+    const res = await fetch(url, Object.assign({signal:ctl.signal, cache:'no-store'}, opts||{}));
+    return {res, ms:Math.round(performance.now()-t0), opaque:res.type==='opaque'};
+  }catch(e){
+    return {err:e, ms:Math.round(performance.now()-t0)};
+  }finally{ clearTimeout(timer); }
+}
+
+function csClassify(x, okStatuses){
+  if(x.err) return {state:'down', note: x.err.name==='AbortError' ? 'Timed out after 10s' : 'Unreachable (network error or CORS)', ms:x.ms};
+  if(x.opaque) return {state:'ok', note:'Reachable', ms:x.ms};
+  if(x.res.ok || (okStatuses||[]).includes(x.res.status)) return {state:'ok', note:'Operational', ms:x.ms};
+  return {state:'warn', note:'Responding with HTTP '+x.res.status, ms:x.ms};
+}
+
+// CORS-aware check: if a cross-origin read is blocked, fall back to an opaque
+// ping so a CORS restriction isn't reported as an outage.
+async function csCheck(url, opts, okStatuses){
+  const x = await csFetch(url, opts);
+  if(x.err && x.err.name!=='AbortError'){
+    const y = await csFetch(url, {mode:'no-cors'});
+    if(!y.err) return {state:'ok', note:'Reachable (CORS-restricted from this origin)', ms:y.ms};
+  }
+  return csClassify(x, okStatuses);
+}
+
+// --- Web application checks (member-app infrastructure only — nothing here touches clanpreston.org) ---
+const CS_WEB = [
+  { id:'sb-auth', name:'Supabase &mdash; Authentication', sub:'auth/v1 (GoTrue)',
+    run: async()=> csClassify(await csFetch(`${SUPABASE_URL}/auth/v1/health`, {headers:{apikey:SUPABASE_ANON_KEY}})) },
+  { id:'sb-rest', name:'Supabase &mdash; Database', sub:'rest/v1 (PostgREST)',
+    run: async()=> csClassify(await csFetch(`${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1`,
+      {headers:{apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+(window._accessToken||SUPABASE_ANON_KEY)}})) },
+  { id:'sb-storage', name:'Supabase &mdash; File Storage', sub:'storage/v1 (archive bucket)',
+    run: async()=>{
+      if(!window._accessToken) return {state:'idle', note:'Requires an admin session to verify'};
+      return csClassify(await csFetch(`${SUPABASE_URL}/storage/v1/object/list/archive`,
+        {method:'POST', headers:aHead({'Content-Type':'application/json'}), body:JSON.stringify({prefix:'', limit:1})}));
+    } },
+  { id:'sb-edge', name:'Supabase &mdash; Email Service', sub:'functions/v1/send-email (Resend)',
+    run: async()=> csCheck(`${SUPABASE_URL}/functions/v1/send-email`,
+      {headers:{apikey:SUPABASE_ANON_KEY}}, [400,401,405]) },
+  { id:'nl-site', name:'Netlify &mdash; Site Hosting', sub:NETLIFY_SITE.replace('https://',''),
+    run: async()=> csClassify(await csFetch(`${NETLIFY_SITE}/`, {mode:'no-cors'})) },
+  { id:'nl-fn', name:'Netlify &mdash; Serverless Functions', sub:'.netlify/functions',
+    run: async()=> csCheck(`${ARCH_FN}/archive-verify-cert`, null, [400]) },
+  { id:'gh-pages', name:'GitHub Pages &mdash; Portal Mirror', sub:'jeffhpreston-web.github.io',
+    run: async()=> csClassify(await csFetch('https://jeffhpreston-web.github.io/preston-family-portal/', {mode:'no-cors'})) },
+  { id:'wp-site', name:'Public Site &mdash; prestoncollection.net', sub:'WordPress.com',
+    run: async()=> csClassify(await csFetch('https://prestoncollection.net/', {mode:'no-cors'})) },
+];
+
+// --- API integrations (tokens live server-side; live tests go through the Netlify proxy) ---
+const CS_APIS = [
+  { key:'psa_api_token', name:'PSA', sub:'Professional Sports Authenticator', provider:'PSA', testCert:'25777282',
+    note:'Card grading verification. A live test uses 1 daily PSA lookup.' },
+  { key:'pcgs_api_key', name:'PCGS', sub:'Professional Coin Grading Service', provider:'PCGS', testCert:'12345678',
+    note:'Coin grading verification.' },
+  { key:'ngc_api_key', name:'NGC', sub:'Numismatic Guaranty Company', provider:null,
+    note:'No public API &mdash; certifications are entered manually.' },
+  { key:'hubspot_token', name:'HubSpot', sub:'CRM / acquisition tracking', provider:null,
+    note:'Used server-side only. Status reflects token configuration.' },
+];
+
+function csRow(id, name, sub, note){
+  return `<div class="cs-row" id="cs-${id}">`+
+    `<span class="cs-dot idle" id="cs-${id}-dot"></span>`+
+    `<span class="cs-name">${name}<span class="cs-sub">${sub||''}</span></span>`+
+    `<span class="cs-note" id="cs-${id}-note">${note||'Checking&hellip;'}</span>`+
+    `<span class="cs-ms" id="cs-${id}-ms"></span>`+
+    `<span id="cs-${id}-extra"></span>`+
+  `</div>`;
+}
+
+function csSet(id, state, note, ms){
+  const dot=document.getElementById(`cs-${id}-dot`);
+  const noteEl=document.getElementById(`cs-${id}-note`);
+  const msEl=document.getElementById(`cs-${id}-ms`);
+  if(dot) dot.className='cs-dot '+state;
+  if(noteEl) noteEl.innerHTML=note;
+  if(msEl) msEl.textContent=(ms||ms===0)?ms+' ms':'';
+}
+
+let _csBusy=false;
+async function connRun(){
+  if(_csBusy) return;
+  _csBusy=true;
+  try{
+    document.getElementById('cs-checked').textContent='Running checks…';
+    document.getElementById('cs-web').innerHTML=CS_WEB.map(c=>csRow(c.id,c.name,c.sub)).join('');
+    await Promise.all([
+      Promise.all(CS_WEB.map(async c=>{
+        try{ const r=await c.run(); csSet(c.id,r.state,r.note,r.ms); }
+        catch(e){ csSet(c.id,'down','Check failed: '+aEsc(e.message)); }
+      })),
+      connLoadApis()
+    ]);
+    document.getElementById('cs-checked').textContent='Last checked '+new Date().toLocaleString();
+  }finally{ _csBusy=false; }
+}
+
+async function connLoadApis(){
+  const el=document.getElementById('cs-api');
+  let byKey={}, extras=[], rpcErr=null;
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/integration_status`,{method:'POST',headers:aHead({'Content-Type':'application/json'}),body:'{}'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const rows=await r.json();
+    rows.forEach(x=>{ byKey[x.key]=x; });
+    extras=rows.filter(x=>!CS_APIS.some(a=>a.key===x.key));
+  }catch(e){ rpcErr=e; }
+
+  el.innerHTML = CS_APIS.map(a=>{
+    const s=byKey[a.key];
+    const pill = rpcErr ? '' : (s&&s.is_set
+      ? '<span class="set-pill on">&#10003; Token set</span>'
+      : '<span class="set-pill off">No token</span>');
+    const btn = a.provider
+      ? `<button class="btn-ghost" style="font-size:10px;" onclick="connTest('${a.provider}','${a.testCert}','${a.key.replace(/[^a-z0-9_]/g,'')}')">Test connection</button>`
+      : '';
+    return `<div class="cs-row" id="cs-api-${a.key}">`+
+      `<span class="cs-dot ${s&&s.is_set?'ok':'idle'}" id="cs-api-${a.key}-dot"></span>`+
+      `<span class="cs-name">${a.name}<span class="cs-sub">${a.sub}</span></span>`+
+      `<span class="cs-note" id="cs-api-${a.key}-note">${a.note}</span>`+
+      `<span class="cs-ms" id="cs-api-${a.key}-ms"></span>`+
+      `<span style="display:flex;gap:10px;align-items:center;">${pill}${btn}</span>`+
+    `</div>`;
+  }).join('')
+  + extras.map(x=>`<div class="cs-row">`+
+      `<span class="cs-dot ${x.is_set?'ok':'idle'}"></span>`+
+      `<span class="cs-name">${aEsc(x.label||x.key)}<span class="cs-sub">custom integration</span></span>`+
+      `<span class="cs-note">${aEsc(x.notes||'')}</span>`+
+      `<span>${x.is_set?'<span class="set-pill on">&#10003; Token set</span>':'<span class="set-pill off">No token</span>'}</span>`+
+    `</div>`).join('')
+  + (rpcErr ? `<p style="color:var(--grey);font-size:12px;margin-top:6px;">Token configuration status unavailable (${aEsc(rpcErr.message)}). Live tests still work.</p>` : '');
+}
+
+async function connTest(provider, cert, key){
+  const id='api-'+key;
+  csSet(id,'idle','Testing '+provider+' connection…');
+  const t0=performance.now();
+  let d;
+  try{
+    const r=await fetch(`${ARCH_FN}/archive-verify-cert?provider=${encodeURIComponent(provider)}&cert=${encodeURIComponent(cert)}`);
+    d=await r.json();
+  }catch(e){
+    csSet(id,'down','Netlify function unreachable — '+aEsc(e.message),Math.round(performance.now()-t0));
+    return;
+  }
+  const ms=Math.round(performance.now()-t0);
+  if(d.ok){
+    csSet(id,'ok','Connected — sample cert verified'+(d.grade?(', grade '+aEsc(String(d.grade))):''),ms);
+  }else if(d.status===429){
+    csSet(id,'warn','Connected, but rate-limited — daily lookup quota exhausted. '+aEsc(d.error||''),ms);
+  }else if(/not configured/i.test(d.error||'')){
+    csSet(id,'warn','Token not configured — add it under Manage APIs.',ms);
+  }else if(/no .* record|not found/i.test(d.error||'')){
+    csSet(id,'ok','Connected — API responded (no record for test cert '+aEsc(cert)+').',ms);
+  }else if(/isn't available|enter the grade manually/i.test(d.error||'')){
+    csSet(id,'idle','Manual only — no automated API for '+aEsc(provider)+'.',ms);
+  }else{
+    csSet(id,'down',aEsc(d.error||'Connection test failed.'),ms);
+  }
 }
 </script>
 
