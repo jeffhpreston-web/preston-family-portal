@@ -2,6 +2,12 @@
   publish = "."
   functions = "netlify/functions"
 
+# Keep-alive ping for both free-tier Supabase projects (auto-pause after ~7
+# idle days). Mondays and Thursdays at 09:00 UTC — twice weekly so a run never
+# lands exactly on the 7-day pause boundary.
+[functions."keep-alive"]
+  schedule = "0 9 * * 1,4"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
